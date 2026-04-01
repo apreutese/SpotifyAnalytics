@@ -175,7 +175,7 @@ def fetch_artist_genres(
     sp: spotipy.Spotify,
     artist_ids: list[str],
 ) -> dict[str, list[str]]:
-    """Fetch genres for a list of artist IDs (one by one — no batch endpoint).
+    """Fetch genres for a list of artist IDs in batches of 50.
 
     Args:
         sp: Authenticated Spotify client.
@@ -185,16 +185,20 @@ def fetch_artist_genres(
         Dict mapping artist_id → list of genres.
     """
     genres_map: dict[str, list[str]] = {}
-
     unique_ids = list(set(aid for aid in artist_ids if aid))
+
     with st.spinner(f"Obteniendo géneros de {len(unique_ids)} artistas…"):
-        for aid in unique_ids:
+        for i in range(0, len(unique_ids), 50):
+            batch = unique_ids[i : i + 50]
             try:
-                artist = sp.artist(aid)
-                genres_map[aid] = artist.get("genres", [])
+                results = sp.artists(batch)
+                for artist in results.get("artists", []):
+                    if artist:
+                        genres_map[artist["id"]] = artist.get("genres", [])
             except Exception as e:
-                logger.warning("Failed to fetch genres for %s: %s", aid, e)
-                genres_map[aid] = []
+                logger.warning("Failed to fetch artist batch %d: %s", i, e)
+                for aid in batch:
+                    genres_map.setdefault(aid, [])
 
     return genres_map
 

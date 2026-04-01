@@ -118,9 +118,9 @@ df_my_genres = kpi_my_genres(liked_df, artist_genres)
 if not df_my_genres.empty:
     tab_chart, tab_table = st.tabs([":material/bar_chart: Gráfico", ":material/table: Tabla"])
     with tab_chart:
-        st.plotly_chart(chart_my_genres(df_my_genres), use_container_width=True)
+        st.plotly_chart(chart_my_genres(df_my_genres), width="stretch")
     with tab_table:
-        st.dataframe(df_my_genres, hide_index=True, use_container_width=True)
+        st.dataframe(df_my_genres, hide_index=True, width="stretch")
 else:
     st.info("No se encontraron géneros para tus artistas.", icon=":material/info:")
 
@@ -137,9 +137,9 @@ df_timeline = kpi_saved_timeline(liked_df)
 if not df_timeline.empty:
     tab_chart2, tab_table2 = st.tabs([":material/bar_chart: Gráfico", ":material/table: Tabla"])
     with tab_chart2:
-        st.plotly_chart(chart_saved_timeline(df_timeline), use_container_width=True)
+        st.plotly_chart(chart_saved_timeline(df_timeline), width="stretch")
     with tab_table2:
-        st.dataframe(df_timeline, hide_index=True, use_container_width=True)
+        st.dataframe(df_timeline, hide_index=True, width="stretch")
 else:
     st.info("Sin datos de timeline.", icon=":material/info:")
 
@@ -156,9 +156,9 @@ if df_dna is not None:
 
     tab_chart3, tab_table3 = st.tabs([":material/bar_chart: Gráfico", ":material/table: Tabla"])
     with tab_chart3:
-        st.plotly_chart(chart_my_audio_dna(df_dna), use_container_width=True)
+        st.plotly_chart(chart_my_audio_dna(df_dna), width="stretch")
     with tab_table3:
-        st.dataframe(df_dna, hide_index=True, use_container_width=True)
+        st.dataframe(df_dna, hide_index=True, width="stretch")
 else:
     st.subheader(":material/donut_small: P3 · Distribución de géneros")
     st.caption("Menos de 20 canciones coinciden con el dataset global — mostrando géneros en su lugar.")
@@ -168,10 +168,10 @@ else:
         tab_chart3, tab_table3 = st.tabs([":material/bar_chart: Gráfico", ":material/table: Tabla"])
         with tab_chart3:
             st.plotly_chart(
-                chart_genre_distribution(df_genre_dist), use_container_width=True,
+                chart_genre_distribution(df_genre_dist), width="stretch",
             )
         with tab_table3:
-            st.dataframe(df_genre_dist, hide_index=True, use_container_width=True)
+            st.dataframe(df_genre_dist, hide_index=True, width="stretch")
     else:
         st.info("Sin datos de géneros.", icon=":material/info:")
 
@@ -188,8 +188,8 @@ df_top = kpi_top_artists(liked_df, top_artists_df)
 if not df_top.empty:
     tab_chart4, tab_table4 = st.tabs([":material/bar_chart: Gráfico", ":material/table: Tabla"])
     with tab_chart4:
-        st.plotly_chart(chart_top_artists(df_top), use_container_width=True)
+        st.plotly_chart(chart_top_artists(df_top), width="stretch")
     with tab_table4:
-        st.dataframe(df_top, hide_index=True, use_container_width=True)
+        st.dataframe(df_top, hide_index=True, width="stretch")
 else:
     st.info("Sin datos de artistas.", icon=":material/info:")

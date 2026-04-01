@@ -102,9 +102,9 @@ df_genres = kpi_top_genres(filtered)
 
 tab_chart, tab_table = st.tabs([":material/bar_chart: Gráfico", ":material/table: Tabla"])
 with tab_chart:
-    st.plotly_chart(chart_top_genres(df_genres), use_container_width=True)
+    st.plotly_chart(chart_top_genres(df_genres), width="stretch")
 with tab_table:
-    st.dataframe(df_genres, hide_index=True, use_container_width=True)
+    st.dataframe(df_genres, hide_index=True, width="stretch")
 
 st.space("small")
 
@@ -126,10 +126,10 @@ if selected_genre:
         tab_chart2, tab_table2 = st.tabs([":material/bar_chart: Gráfico", ":material/table: Tabla"])
         with tab_chart2:
             st.plotly_chart(
-                chart_genre_dna(df_dna, selected_genre), use_container_width=True,
+                chart_genre_dna(df_dna, selected_genre), width="stretch",
             )
         with tab_table2:
-            st.dataframe(df_dna, hide_index=True, use_container_width=True)
+            st.dataframe(df_dna, hide_index=True, width="stretch")
     else:
         st.info("Sin datos para este género.", icon=":material/info:")
 
@@ -145,9 +145,9 @@ corr_df = kpi_popularity_correlation(filtered)
 
 tab_chart3, tab_table3 = st.tabs([":material/bar_chart: Gráfico", ":material/table: Tabla"])
 with tab_chart3:
-    st.plotly_chart(chart_popularity_correlation(corr_df), use_container_width=True)
+    st.plotly_chart(chart_popularity_correlation(corr_df), width="stretch")
 with tab_table3:
-    st.dataframe(corr_df, use_container_width=True)
+    st.dataframe(corr_df, width="stretch")
 
 st.space("small")
 
@@ -162,9 +162,9 @@ if df_sentiment is not None and len(df_sentiment) > 1:
 
     tab_chart4, tab_table4 = st.tabs([":material/bar_chart: Gráfico", ":material/table: Tabla"])
     with tab_chart4:
-        st.plotly_chart(chart_sentiment_by_year(df_sentiment), use_container_width=True)
+        st.plotly_chart(chart_sentiment_by_year(df_sentiment), width="stretch")
     with tab_table4:
-        st.dataframe(df_sentiment, hide_index=True, use_container_width=True)
+        st.dataframe(df_sentiment, hide_index=True, width="stretch")
 else:
     st.subheader(":material/equalizer: G4 · Distribución de Popularidad")
 
@@ -173,7 +173,7 @@ else:
     tab_chart4, tab_table4 = st.tabs([":material/bar_chart: Gráfico", ":material/table: Tabla"])
     with tab_chart4:
         st.plotly_chart(
-            chart_popularity_distribution(df_dist), use_container_width=True,
+            chart_popularity_distribution(df_dist), width="stretch",
         )
     with tab_table4:
-        st.dataframe(df_dist, hide_index=True, use_container_width=True)
+        st.dataframe(df_dist, hide_index=True, width="stretch")

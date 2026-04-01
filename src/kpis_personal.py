@@ -60,7 +60,7 @@ def kpi_saved_timeline(liked_df: pd.DataFrame) -> pd.DataFrame:
         return pd.DataFrame(columns=["month", "count"])
 
     temp = liked_df.copy()
-    temp["month"] = temp["added_at"].dt.to_period("M").astype(str)
+    temp["month"] = temp["added_at"].dt.tz_localize(None).dt.to_period("M").astype(str)
     result = (
         temp.groupby("month")
         .size()
