@@ -16,7 +16,7 @@ from src.charts_global import (
     chart_popularity_distribution,
 )
 
-st.set_page_config(page_title="Global — SpotifyAnalytics", page_icon="🌍", layout="wide")
+st.set_page_config(page_title="Global — SpotifyAnalytics", page_icon=":material/public:", layout="wide")
 
 # ---------------------------------------------------------------------------
 # Data
@@ -30,7 +30,7 @@ has_year: bool = "year" in df.columns
 # ---------------------------------------------------------------------------
 
 with st.sidebar:
-    st.header("Filtros")
+    st.header(":material/filter_list: Filtros")
 
     all_genres = sorted(df["genre"].dropna().unique().tolist())
     selected_genres: list[str] = st.multiselect(
@@ -80,7 +80,7 @@ if only_explicit:
 # Header
 # ---------------------------------------------------------------------------
 
-st.title("🌍 Análisis Global")
+st.title(":material/public: Análisis Global")
 
 with st.container(horizontal=True):
     st.metric("Tracks filtrados", f"{len(filtered):,}", border=True)
@@ -88,30 +88,31 @@ with st.container(horizontal=True):
     st.metric("Géneros", f"{filtered['genre'].nunique():,}", border=True)
 
 if filtered.empty:
-    st.warning("No hay datos con los filtros seleccionados.")
+    st.warning("No hay datos con los filtros seleccionados.", icon=":material/warning:")
     st.stop()
 
 # ---------------------------------------------------------------------------
 # G1 — Top Géneros
 # ---------------------------------------------------------------------------
 
-st.subheader("G1 · Top Géneros")
+st.space("small")
+st.subheader(":material/category: G1 · Top Géneros")
 
 df_genres = kpi_top_genres(filtered)
 
-tab_chart, tab_table = st.tabs(["📊 Gráfico", "📋 Tabla"])
+tab_chart, tab_table = st.tabs([":material/bar_chart: Gráfico", ":material/table: Tabla"])
 with tab_chart:
     st.plotly_chart(chart_top_genres(df_genres), use_container_width=True)
 with tab_table:
     st.dataframe(df_genres, hide_index=True, use_container_width=True)
 
-st.divider()
+st.space("small")
 
 # ---------------------------------------------------------------------------
 # G2 — ADN Musical por Género
 # ---------------------------------------------------------------------------
 
-st.subheader("G2 · ADN Musical por Género")
+st.subheader(":material/graphic_eq: G2 · ADN Musical por Género")
 
 genre_options = sorted(filtered["genre"].dropna().unique().tolist())
 selected_genre = st.selectbox(
@@ -122,7 +123,7 @@ selected_genre = st.selectbox(
 if selected_genre:
     df_dna = kpi_genre_dna(filtered, selected_genre)
     if not df_dna.empty:
-        tab_chart2, tab_table2 = st.tabs(["📊 Gráfico", "📋 Tabla"])
+        tab_chart2, tab_table2 = st.tabs([":material/bar_chart: Gráfico", ":material/table: Tabla"])
         with tab_chart2:
             st.plotly_chart(
                 chart_genre_dna(df_dna, selected_genre), use_container_width=True,
@@ -130,25 +131,25 @@ if selected_genre:
         with tab_table2:
             st.dataframe(df_dna, hide_index=True, use_container_width=True)
     else:
-        st.info("Sin datos para este género.")
+        st.info("Sin datos para este género.", icon=":material/info:")
 
-st.divider()
+st.space("small")
 
 # ---------------------------------------------------------------------------
 # G3 — Popularidad vs Features
 # ---------------------------------------------------------------------------
 
-st.subheader("G3 · Popularidad vs Audio Features")
+st.subheader(":material/scatter_plot: G3 · Popularidad vs Audio Features")
 
 corr_df = kpi_popularity_correlation(filtered)
 
-tab_chart3, tab_table3 = st.tabs(["📊 Gráfico", "📋 Tabla"])
+tab_chart3, tab_table3 = st.tabs([":material/bar_chart: Gráfico", ":material/table: Tabla"])
 with tab_chart3:
     st.plotly_chart(chart_popularity_correlation(corr_df), use_container_width=True)
 with tab_table3:
     st.dataframe(corr_df, use_container_width=True)
 
-st.divider()
+st.space("small")
 
 # ---------------------------------------------------------------------------
 # G4 — Sentimiento Temporal / Distribución de Popularidad (fallback)
@@ -157,19 +158,19 @@ st.divider()
 df_sentiment = kpi_sentiment_by_year(filtered) if has_year else None
 
 if df_sentiment is not None and len(df_sentiment) > 1:
-    st.subheader("G4 · Sentimiento Musical por Década")
+    st.subheader(":material/timeline: G4 · Sentimiento Musical por Década")
 
-    tab_chart4, tab_table4 = st.tabs(["📊 Gráfico", "📋 Tabla"])
+    tab_chart4, tab_table4 = st.tabs([":material/bar_chart: Gráfico", ":material/table: Tabla"])
     with tab_chart4:
         st.plotly_chart(chart_sentiment_by_year(df_sentiment), use_container_width=True)
     with tab_table4:
         st.dataframe(df_sentiment, hide_index=True, use_container_width=True)
 else:
-    st.subheader("G4 · Distribución de Popularidad")
+    st.subheader(":material/equalizer: G4 · Distribución de Popularidad")
 
     df_dist = kpi_popularity_distribution(filtered)
 
-    tab_chart4, tab_table4 = st.tabs(["📊 Gráfico", "📋 Tabla"])
+    tab_chart4, tab_table4 = st.tabs([":material/bar_chart: Gráfico", ":material/table: Tabla"])
     with tab_chart4:
         st.plotly_chart(
             chart_popularity_distribution(df_dist), use_container_width=True,

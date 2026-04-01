@@ -4,7 +4,7 @@ from src.data_loader import get_global_dataframe
 
 st.set_page_config(
     page_title="SpotifyAnalytics",
-    page_icon="🎵",
+    page_icon=":material/music_note:",
     layout="wide",
 )
 
@@ -19,33 +19,31 @@ has_year: bool = "year" in df.columns
 # Header
 # ---------------------------------------------------------------------------
 
-st.title("🎵 SpotifyAnalytics")
-st.markdown(
+st.title(":material/music_note: SpotifyAnalytics")
+st.caption(
     "Dashboard de análisis de datos musicales de Spotify. "
     "Combina datos globales (HuggingFace + Kaggle) con datos personales "
     "de tu cuenta de Spotify."
 )
 
-st.divider()
+st.space("small")
 
 # ---------------------------------------------------------------------------
 # Dataset metrics
 # ---------------------------------------------------------------------------
 
-st.subheader("📊 Resumen del dataset")
+st.subheader(":material/analytics: Resumen del dataset")
 
-col1, col2, col3, col4 = st.columns(4)
-
-col1.metric("Tracks", f"{len(df):,}")
-col2.metric("Artistas", f"{df['artist'].nunique():,}")
-col3.metric("Géneros", f"{df['genre'].nunique():,}")
-
-if has_year:
-    year_min = int(df["year"].dropna().min())
-    year_max = int(df["year"].dropna().max())
-    col4.metric("Rango temporal", f"{year_min} – {year_max}")
-else:
-    col4.metric("Rango temporal", "No disponible")
+with st.container(horizontal=True):
+    st.metric("Tracks", f"{len(df):,}", border=True)
+    st.metric("Artistas", f"{df['artist'].nunique():,}", border=True)
+    st.metric("Géneros", f"{df['genre'].nunique():,}", border=True)
+    if has_year:
+        year_min = int(df["year"].dropna().min())
+        year_max = int(df["year"].dropna().max())
+        st.metric("Rango temporal", f"{year_min} – {year_max}", border=True)
+    else:
+        st.metric("Rango temporal", "No disponible", border=True)
 
 # ---------------------------------------------------------------------------
 # Merge info
@@ -67,8 +65,16 @@ else:
 # Navigation hint
 # ---------------------------------------------------------------------------
 
-st.divider()
-st.markdown(
-    "👈 Usa el **menú lateral** para navegar a las páginas "
-    "**Global** o **Mi Perfil**."
-)
+st.space("medium")
+
+col_g, col_p = st.columns(2)
+with col_g:
+    with st.container(border=True):
+        st.subheader(":material/public: Global")
+        st.caption("Explora 114k+ tracks: géneros, audio features, tendencias por década.")
+        st.page_link("pages/1_Global.py", label="Ir a Global", icon=":material/arrow_forward:")
+with col_p:
+    with st.container(border=True):
+        st.subheader(":material/person: Mi Perfil")
+        st.caption("Conecta tu cuenta de Spotify y descubre tu ADN musical.")
+        st.page_link("pages/2_Mi_Perfil.py", label="Ir a Mi Perfil", icon=":material/arrow_forward:")

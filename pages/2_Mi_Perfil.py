@@ -24,9 +24,9 @@ from src.charts_personal import (
     chart_top_artists,
 )
 
-st.set_page_config(page_title="Mi Perfil — SpotifyAnalytics", page_icon="👤", layout="wide")
+st.set_page_config(page_title="Mi Perfil — SpotifyAnalytics", page_icon=":material/person:", layout="wide")
 
-st.title("👤 Mi Perfil")
+st.title(":material/person: Mi Perfil")
 
 # ---------------------------------------------------------------------------
 # Auth
@@ -37,7 +37,8 @@ sp = get_spotify_client()
 if sp is None:
     st.info(
         "Conecta tu cuenta de Spotify para ver tus estadísticas personales. "
-        "Si el botón de arriba no funciona, ejecuta `python auth.py` en terminal."
+        "Si el botón de arriba no funciona, ejecuta `python auth.py` en terminal.",
+        icon=":material/login:",
     )
     st.stop()
 
@@ -52,7 +53,7 @@ TIME_RANGE_MAP: dict[str, str] = {
 }
 
 with st.sidebar:
-    st.header("Filtros")
+    st.header(":material/filter_list: Filtros")
 
     time_label = st.radio(
         "Período Top Artists",
@@ -77,7 +78,7 @@ liked_df = fetch_liked_songs(sp)
 top_artists_df = fetch_top_artists(sp, time_range=time_range)
 
 if liked_df.empty:
-    st.warning("No se encontraron canciones guardadas en tu biblioteca.")
+    st.warning("No se encontraron canciones guardadas en tu biblioteca.", icon=":material/warning:")
     st.stop()
 
 # Apply date filter
@@ -109,39 +110,40 @@ with st.container(horizontal=True):
 # P1 — Mis Géneros
 # ---------------------------------------------------------------------------
 
-st.subheader("P1 · Mis Géneros")
+st.space("small")
+st.subheader(":material/category: P1 · Mis Géneros")
 
 df_my_genres = kpi_my_genres(liked_df, artist_genres)
 
 if not df_my_genres.empty:
-    tab_chart, tab_table = st.tabs(["📊 Gráfico", "📋 Tabla"])
+    tab_chart, tab_table = st.tabs([":material/bar_chart: Gráfico", ":material/table: Tabla"])
     with tab_chart:
         st.plotly_chart(chart_my_genres(df_my_genres), use_container_width=True)
     with tab_table:
         st.dataframe(df_my_genres, hide_index=True, use_container_width=True)
 else:
-    st.info("No se encontraron géneros para tus artistas.")
+    st.info("No se encontraron géneros para tus artistas.", icon=":material/info:")
 
-st.divider()
+st.space("small")
 
 # ---------------------------------------------------------------------------
 # P2 — Timeline de Guardados
 # ---------------------------------------------------------------------------
 
-st.subheader("P2 · Timeline de Canciones Guardadas")
+st.subheader(":material/schedule: P2 · Timeline de canciones guardadas")
 
 df_timeline = kpi_saved_timeline(liked_df)
 
 if not df_timeline.empty:
-    tab_chart2, tab_table2 = st.tabs(["📊 Gráfico", "📋 Tabla"])
+    tab_chart2, tab_table2 = st.tabs([":material/bar_chart: Gráfico", ":material/table: Tabla"])
     with tab_chart2:
         st.plotly_chart(chart_saved_timeline(df_timeline), use_container_width=True)
     with tab_table2:
         st.dataframe(df_timeline, hide_index=True, use_container_width=True)
 else:
-    st.info("Sin datos de timeline.")
+    st.info("Sin datos de timeline.", icon=":material/info:")
 
-st.divider()
+st.space("small")
 
 # ---------------------------------------------------------------------------
 # P3 — Mi ADN Musical / Distribución de Géneros (fallback)
@@ -150,20 +152,20 @@ st.divider()
 df_dna = kpi_my_audio_dna(enriched_df)
 
 if df_dna is not None:
-    st.subheader("P3 · Mi ADN Musical")
+    st.subheader(":material/graphic_eq: P3 · Mi ADN musical")
 
-    tab_chart3, tab_table3 = st.tabs(["📊 Gráfico", "📋 Tabla"])
+    tab_chart3, tab_table3 = st.tabs([":material/bar_chart: Gráfico", ":material/table: Tabla"])
     with tab_chart3:
         st.plotly_chart(chart_my_audio_dna(df_dna), use_container_width=True)
     with tab_table3:
         st.dataframe(df_dna, hide_index=True, use_container_width=True)
 else:
-    st.subheader("P3 · Distribución de Géneros")
+    st.subheader(":material/donut_small: P3 · Distribución de géneros")
     st.caption("Menos de 20 canciones coinciden con el dataset global — mostrando géneros en su lugar.")
 
     df_genre_dist = kpi_genre_distribution(artist_genres)
     if not df_genre_dist.empty:
-        tab_chart3, tab_table3 = st.tabs(["📊 Gráfico", "📋 Tabla"])
+        tab_chart3, tab_table3 = st.tabs([":material/bar_chart: Gráfico", ":material/table: Tabla"])
         with tab_chart3:
             st.plotly_chart(
                 chart_genre_distribution(df_genre_dist), use_container_width=True,
@@ -171,23 +173,23 @@ else:
         with tab_table3:
             st.dataframe(df_genre_dist, hide_index=True, use_container_width=True)
     else:
-        st.info("Sin datos de géneros.")
+        st.info("Sin datos de géneros.", icon=":material/info:")
 
-st.divider()
+st.space("small")
 
 # ---------------------------------------------------------------------------
 # P4 — Mis Top Artists
 # ---------------------------------------------------------------------------
 
-st.subheader("P4 · Mis Top Artistas")
+st.subheader(":material/star: P4 · Mis top artistas")
 
 df_top = kpi_top_artists(liked_df, top_artists_df)
 
 if not df_top.empty:
-    tab_chart4, tab_table4 = st.tabs(["📊 Gráfico", "📋 Tabla"])
+    tab_chart4, tab_table4 = st.tabs([":material/bar_chart: Gráfico", ":material/table: Tabla"])
     with tab_chart4:
         st.plotly_chart(chart_top_artists(df_top), use_container_width=True)
     with tab_table4:
         st.dataframe(df_top, hide_index=True, use_container_width=True)
 else:
-    st.info("Sin datos de artistas.")
+    st.info("Sin datos de artistas.", icon=":material/info:")
