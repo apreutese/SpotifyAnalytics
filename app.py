@@ -9,6 +9,20 @@ st.set_page_config(
 )
 
 # ---------------------------------------------------------------------------
+# OAuth redirect handler
+# ---------------------------------------------------------------------------
+
+if "code" in st.query_params:
+    from src.spotify_client import _get_oauth_manager
+    oauth = _get_oauth_manager()
+    try:
+        oauth.get_access_token(st.query_params["code"])
+    except Exception:
+        pass
+    st.query_params.clear()
+    st.switch_page("pages/2_Mi_Perfil.py")
+
+# ---------------------------------------------------------------------------
 # Data
 # ---------------------------------------------------------------------------
 
