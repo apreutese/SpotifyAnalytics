@@ -120,10 +120,16 @@ def load_kaggle_year() -> pd.DataFrame | None:
 
     df = pd.read_csv(
         csv_path,
-        usecols=["id", "year"],
-        dtype={"id": str, "year": "Int64"},
+        usecols=["id", "release_date"],
+        dtype={"id": str, "release_date": str},
     )
     df = df.rename(columns={"id": "track_id"})
+    # Extract year from release_date (formats: 'YYYY', 'YYYY-MM', 'YYYY-MM-DD')
+    df["year"] = pd.to_numeric(
+        df["release_date"].str[:4], errors="coerce",
+    ).astype("Int64")
+    df = df.drop(columns=["release_date"])
+    df = df.dropna(subset=["year"])
     df = df.drop_duplicates(subset="track_id", keep="first")
     logger.info("Kaggle year rows: %d", len(df))
     return df
