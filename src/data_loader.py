@@ -3,6 +3,7 @@
 import logging
 from pathlib import Path
 
+import kagglehub
 import pandas as pd
 import streamlit as st
 
@@ -18,7 +19,8 @@ HF_PARQUET_URL: str = (
     "default/train/0000.parquet"
 )
 
-KAGGLE_CSV_PATH: Path = Path(__file__).resolve().parent.parent / "data" / "kaggle_tracks.csv"
+KAGGLE_LOCAL_CSV: Path = Path(__file__).resolve().parent.parent / "data" / "kaggle_tracks.csv"
+KAGGLE_DATASET: str = "yamaerenay/spotify-dataset-19212020-600k-tracks"
 
 AUDIO_FEATURES: list[str] = [
     "danceability",
@@ -77,19 +79,47 @@ def load_hf_dataset() -> pd.DataFrame:
 # ---------------------------------------------------------------------------
 
 
+def _resolve_kaggle_csv() -> Path | None:
+    """Find the Kaggle tracks CSV: local fallback or kagglehub download.
+
+    Returns:
+        Path to tracks.csv or None if unavailable.
+    """
+    # 1. Local fallback
+    if KAGGLE_LOCAL_CSV.exists():
+        logger.info("Using local Kaggle CSV at %s", KAGGLE_LOCAL_CSV)
+        return KAGGLE_LOCAL_CSV
+
+    # 2. Auto-download via kagglehub
+    try:
+        dataset_dir = kagglehub.dataset_download(KAGGLE_DATASET)
+        csv_path = Path(dataset_dir) / "tracks.csv"
+        if csv_path.exists():
+            logger.info("Downloaded Kaggle dataset via kagglehub: %s", csv_path)
+            return csv_path
+        logger.warning("kagglehub downloaded but tracks.csv not found in %s", dataset_dir)
+    except Exception as e:
+        logger.warning("kagglehub download failed: %s", e)
+
+    return None
+
+
 @st.cache_data(show_spinner="Cargando dataset Kaggle…")
 def load_kaggle_year() -> pd.DataFrame | None:
     """Load only track_id and year from the Kaggle CSV.
 
+    Tries kagglehub auto-download first, falls back to local CSV.
+
     Returns:
-        DataFrame with columns [track_id, year] or None if file missing.
+        DataFrame with columns [track_id, year] or None if unavailable.
     """
-    if not KAGGLE_CSV_PATH.exists():
-        logger.warning("Kaggle CSV not found at %s", KAGGLE_CSV_PATH)
+    csv_path = _resolve_kaggle_csv()
+    if csv_path is None:
+        logger.warning("Kaggle dataset not available — skipping.")
         return None
 
     df = pd.read_csv(
-        KAGGLE_CSV_PATH,
+        csv_path,
         usecols=["id", "year"],
         dtype={"id": str, "year": "Int64"},
     )

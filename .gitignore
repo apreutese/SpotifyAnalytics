@@ -31,5 +31,8 @@ data/*.csv
 # Private docs (enunciado, plan interno)
 docs-priv/
 
+# Spotify token cache
+.spotify_cache
+
 # Environment
 .env

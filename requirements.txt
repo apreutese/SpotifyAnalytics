@@ -4,3 +4,4 @@ plotly>=5.18
 spotipy>=2.23
 python-dotenv>=1.0
 pyarrow>=14.0
+kagglehub>=0.3
