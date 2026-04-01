@@ -1,0 +1,10 @@
+[theme]
+base = "dark"
+primaryColor = "#1DB954"
+backgroundColor = "#121212"
+secondaryBackgroundColor = "#181818"
+textColor = "#FFFFFF"
+font = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+codeFont = "'Fira Code':https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&display=swap"
+chartCategoricalColors = ["#1DB954", "#1ED760", "#535353", "#B3B3B3", "#509BF5", "#AF2896"]
+baseRadius = "0.5rem"
