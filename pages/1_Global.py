@@ -1,0 +1,178 @@
+import streamlit as st
+
+from src.data_loader import get_global_dataframe
+from src.kpis_global import (
+    kpi_top_genres,
+    kpi_genre_dna,
+    kpi_popularity_correlation,
+    kpi_sentiment_by_year,
+    kpi_popularity_distribution,
+)
+from src.charts_global import (
+    chart_top_genres,
+    chart_genre_dna,
+    chart_popularity_correlation,
+    chart_sentiment_by_year,
+    chart_popularity_distribution,
+)
+
+st.set_page_config(page_title="Global — SpotifyAnalytics", page_icon="🌍", layout="wide")
+
+# ---------------------------------------------------------------------------
+# Data
+# ---------------------------------------------------------------------------
+
+df, match_rate = get_global_dataframe()
+has_year: bool = "year" in df.columns
+
+# ---------------------------------------------------------------------------
+# Sidebar filters
+# ---------------------------------------------------------------------------
+
+with st.sidebar:
+    st.header("Filtros")
+
+    all_genres = sorted(df["genre"].dropna().unique().tolist())
+    selected_genres: list[str] = st.multiselect(
+        "Género(s)", options=all_genres, default=[], placeholder="Todos los géneros",
+    )
+
+    pop_min, pop_max = int(df["popularity"].min()), int(df["popularity"].max())
+    pop_range: tuple[int, int] = st.slider(
+        "Rango de popularidad", min_value=pop_min, max_value=pop_max,
+        value=(pop_min, pop_max),
+    )
+
+    if has_year:
+        years_available = sorted(df["year"].dropna().astype(int).unique().tolist())
+        year_range = st.select_slider(
+            "Año", options=years_available,
+            value=(years_available[0], years_available[-1]),
+        )
+    else:
+        year_range = None
+
+    only_explicit: bool = st.checkbox("Solo explícitas", value=False)
+
+# ---------------------------------------------------------------------------
+# Apply filters
+# ---------------------------------------------------------------------------
+
+filtered = df.copy()
+
+if selected_genres:
+    filtered = filtered[filtered["genre"].isin(selected_genres)]
+
+filtered = filtered[
+    (filtered["popularity"] >= pop_range[0])
+    & (filtered["popularity"] <= pop_range[1])
+]
+
+if has_year and year_range is not None:
+    filtered = filtered[
+        filtered["year"].between(year_range[0], year_range[1])
+    ]
+
+if only_explicit:
+    filtered = filtered[filtered["explicit"] == True]  # noqa: E712
+
+# ---------------------------------------------------------------------------
+# Header
+# ---------------------------------------------------------------------------
+
+st.title("🌍 Análisis Global")
+
+with st.container(horizontal=True):
+    st.metric("Tracks filtrados", f"{len(filtered):,}", border=True)
+    st.metric("Artistas", f"{filtered['artist'].nunique():,}", border=True)
+    st.metric("Géneros", f"{filtered['genre'].nunique():,}", border=True)
+
+if filtered.empty:
+    st.warning("No hay datos con los filtros seleccionados.")
+    st.stop()
+
+# ---------------------------------------------------------------------------
+# G1 — Top Géneros
+# ---------------------------------------------------------------------------
+
+st.subheader("G1 · Top Géneros")
+
+df_genres = kpi_top_genres(filtered)
+
+tab_chart, tab_table = st.tabs(["📊 Gráfico", "📋 Tabla"])
+with tab_chart:
+    st.plotly_chart(chart_top_genres(df_genres), use_container_width=True)
+with tab_table:
+    st.dataframe(df_genres, hide_index=True, use_container_width=True)
+
+st.divider()
+
+# ---------------------------------------------------------------------------
+# G2 — ADN Musical por Género
+# ---------------------------------------------------------------------------
+
+st.subheader("G2 · ADN Musical por Género")
+
+genre_options = sorted(filtered["genre"].dropna().unique().tolist())
+selected_genre = st.selectbox(
+    "Selecciona un género para el radar", options=genre_options,
+    index=0 if genre_options else None,
+)
+
+if selected_genre:
+    df_dna = kpi_genre_dna(filtered, selected_genre)
+    if not df_dna.empty:
+        tab_chart2, tab_table2 = st.tabs(["📊 Gráfico", "📋 Tabla"])
+        with tab_chart2:
+            st.plotly_chart(
+                chart_genre_dna(df_dna, selected_genre), use_container_width=True,
+            )
+        with tab_table2:
+            st.dataframe(df_dna, hide_index=True, use_container_width=True)
+    else:
+        st.info("Sin datos para este género.")
+
+st.divider()
+
+# ---------------------------------------------------------------------------
+# G3 — Popularidad vs Features
+# ---------------------------------------------------------------------------
+
+st.subheader("G3 · Popularidad vs Audio Features")
+
+corr_df = kpi_popularity_correlation(filtered)
+
+tab_chart3, tab_table3 = st.tabs(["📊 Gráfico", "📋 Tabla"])
+with tab_chart3:
+    st.plotly_chart(chart_popularity_correlation(corr_df), use_container_width=True)
+with tab_table3:
+    st.dataframe(corr_df, use_container_width=True)
+
+st.divider()
+
+# ---------------------------------------------------------------------------
+# G4 — Sentimiento Temporal / Distribución de Popularidad (fallback)
+# ---------------------------------------------------------------------------
+
+df_sentiment = kpi_sentiment_by_year(filtered) if has_year else None
+
+if df_sentiment is not None and len(df_sentiment) > 1:
+    st.subheader("G4 · Sentimiento Musical por Década")
+
+    tab_chart4, tab_table4 = st.tabs(["📊 Gráfico", "📋 Tabla"])
+    with tab_chart4:
+        st.plotly_chart(chart_sentiment_by_year(df_sentiment), use_container_width=True)
+    with tab_table4:
+        st.dataframe(df_sentiment, hide_index=True, use_container_width=True)
+else:
+    st.subheader("G4 · Distribución de Popularidad")
+
+    df_dist = kpi_popularity_distribution(filtered)
+
+    tab_chart4, tab_table4 = st.tabs(["📊 Gráfico", "📋 Tabla"])
+    with tab_chart4:
+        st.plotly_chart(
+            chart_popularity_distribution(df_dist), use_container_width=True,
+        )
+    with tab_table4:
+        st.dataframe(df_dist, hide_index=True, use_container_width=True)
