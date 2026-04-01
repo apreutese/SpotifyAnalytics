@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+venv/
+.venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Data (large files)
+data/*.csv
+
+# Streamlit secrets (config.toml IS tracked)
+.streamlit/secrets.toml
+
+# AI config
+.agent/
+.windsurfrules
+
+# Private docs (enunciado, plan interno)
+docs-priv/
+
+# Environment
+.env
