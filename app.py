@@ -16,7 +16,7 @@ if "code" in st.query_params:
     from src.spotify_client import _get_oauth_manager
     oauth = _get_oauth_manager()
     try:
-        oauth.get_access_token(st.query_params["code"])
+        oauth.get_access_token(st.query_params["code"], as_dict=False)
     except Exception:
         pass
     st.query_params.clear()
