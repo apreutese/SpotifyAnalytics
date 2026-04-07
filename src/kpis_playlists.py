@@ -3,6 +3,7 @@
 import pandas as pd
 
 from src.data_loader import AUDIO_FEATURES
+from src.kpis_personal import LANGUAGE_GENRES
 
 
 def kpi_playlist_genres(
@@ -21,9 +22,15 @@ def kpi_playlist_genres(
     if "genre" not in tracks_df.columns or tracks_df["genre"].dropna().empty:
         return pd.DataFrame(columns=["genre", "count", "pct"])
 
+    # Filter out language/nationality genres
+    genres = tracks_df["genre"].dropna()
+    genres = genres[~genres.str.lower().isin(LANGUAGE_GENRES)]
+
+    if genres.empty:
+        return pd.DataFrame(columns=["genre", "count", "pct"])
+
     genre_counts = (
-        tracks_df["genre"]
-        .dropna()
+        genres
         .value_counts()
         .head(top_n)
         .reset_index()
@@ -54,6 +61,14 @@ def kpi_playlist_audio_dna(
         return pd.DataFrame(columns=["feature", "value"])
 
     means = valid[available].mean()
+
+    # Normalize features that are not on 0-1 scale
+    if "tempo" in means.index:
+        means["tempo"] = means["tempo"] / 250.0
+    if "loudness" in means.index:
+        # loudness is typically -60 to 0 dB; map to 0-1
+        means["loudness"] = (means["loudness"] + 60.0) / 60.0
+
     return pd.DataFrame({"feature": means.index, "value": means.values})
 
 

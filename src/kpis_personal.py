@@ -146,6 +146,8 @@ def kpi_my_audio_dna(liked_df: pd.DataFrame) -> pd.DataFrame | None:
     means = matched[RADAR_FEATURES].mean()
     if "tempo" in means.index:
         means["tempo"] = means["tempo"] / 250.0
+    if "loudness" in means.index:
+        means["loudness"] = (means["loudness"] + 60.0) / 60.0
 
     result = means.reset_index()
     result.columns = ["feature", "value"]

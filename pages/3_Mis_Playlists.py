@@ -211,7 +211,21 @@ if "Análisis individual" in mode:
             with tab_table:
                 st.dataframe(analysis["timeline"], use_container_width=True, hide_index=True)
 
-        # Track list with embed
+        # Playlist embed player
+        st.space("small")
+        st.subheader(":material/headphones: Reproductor")
+
+        import streamlit.components.v1 as components
+        playlist_embed = (
+            f'<iframe src="https://open.spotify.com/embed/playlist/{selected_id}'
+            f'?theme=0" width="100%" height="352" frameBorder="0" '
+            f'allow="autoplay; clipboard-write; encrypted-media; '
+            f'fullscreen; picture-in-picture" loading="lazy" '
+            f'style="border-radius:12px"></iframe>'
+        )
+        components.html(playlist_embed, height=362)
+
+        # Track list
         st.space("small")
         st.subheader(":material/library_music: Tracks")
 

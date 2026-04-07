@@ -227,47 +227,46 @@ st.subheader(":material/music_note: P5 · Mis top tracks")
 top_tracks_df = fetch_top_tracks(sp, time_range=time_range)
 
 if not top_tracks_df.empty:
-    display_cols = [
-        c for c in ["rank", "album_cover_url", "track_name", "artist", "album"]
-        if c in top_tracks_df.columns
-    ]
-    col_config_tt = {
-        "rank": st.column_config.NumberColumn("#", width=50),
-        "track_name": st.column_config.TextColumn("Track"),
-        "artist": st.column_config.TextColumn("Artista"),
-        "album": st.column_config.TextColumn("Álbum"),
-    }
-    if "album_cover_url" in display_cols:
-        col_config_tt["album_cover_url"] = st.column_config.ImageColumn("Cover", width=60)
+    import streamlit.components.v1 as components
 
-    st.dataframe(
-        top_tracks_df[display_cols],
-        use_container_width=True,
-        hide_index=True,
-        column_config=col_config_tt,
-    )
+    top_10 = top_tracks_df.head(10)
 
-    # Embed player for selected track
-    st.caption(":material/headphones: Selecciona un track para escucharlo")
-    track_options = {
-        row["track_id"]: f"{row['rank']}. {row['track_name']} — {row['artist']}"
-        for _, row in top_tracks_df.iterrows()
-    }
-    selected_track = st.selectbox(
-        "Reproducir track",
-        options=list(track_options.keys()),
-        format_func=lambda x: track_options[x],
-        label_visibility="collapsed",
+    # Render cards in a 2-column grid
+    for row_start in range(0, len(top_10), 2):
+        cols = st.columns(2)
+        for col_idx, col in enumerate(cols):
+            row_idx = row_start + col_idx
+            if row_idx >= len(top_10):
+                break
+            row = top_10.iloc[row_idx]
+            with col:
+                with st.container(border=True):
+                    c_img, c_info, c_btn = st.columns([1, 4, 1])
+                    with c_img:
+                        if row.get("album_cover_url"):
+                            st.image(row["album_cover_url"], width=56)
+                        else:
+                            st.markdown(f"**#{row['rank']}**")
+                    with c_info:
+                        st.markdown(f"**{row['track_name']}**")
+                        st.caption(f"{row['artist']}")
+                    with c_btn:
+                        if st.button(
+                            ":material/play_circle:",
+                            key=f"play_tt_{row['track_id']}",
+                            use_container_width=True,
+                        ):
+                            st.session_state["p5_selected_track"] = row["track_id"]
+
+    # Show embed for selected track
+    selected_tt = st.session_state.get("p5_selected_track", top_10.iloc[0]["track_id"])
+    embed_html = (
+        f'<iframe src="https://open.spotify.com/embed/track/{selected_tt}'
+        f'?theme=0" width="100%" height="152" frameBorder="0" '
+        f'allow="autoplay; clipboard-write; encrypted-media; '
+        f'fullscreen; picture-in-picture" loading="lazy" '
+        f'style="border-radius:12px"></iframe>'
     )
-    if selected_track:
-        import streamlit.components.v1 as components
-        embed_html = (
-            f'<iframe src="https://open.spotify.com/embed/track/{selected_track}'
-            f'?theme=0" width="100%" height="152" frameBorder="0" '
-            f'allow="autoplay; clipboard-write; encrypted-media; '
-            f'fullscreen; picture-in-picture" loading="lazy" '
-            f'style="border-radius:12px"></iframe>'
-        )
-        components.html(embed_html, height=160)
+    components.html(embed_html, height=160)
 else:
     st.info("Sin datos de top tracks.", icon=":material/info:")
