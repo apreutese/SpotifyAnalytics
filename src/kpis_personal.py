@@ -199,8 +199,11 @@ def kpi_top_artists(
     )
 
     if not top_artists_df.empty:
+        merge_cols = ["artist", "rank"]
+        if "artist_image_url" in top_artists_df.columns:
+            merge_cols.append("artist_image_url")
         merged = liked_counts.merge(
-            top_artists_df[["artist", "rank"]].rename(columns={"rank": "top_rank"}),
+            top_artists_df[merge_cols].rename(columns={"rank": "top_rank"}),
             on="artist",
             how="left",
         )

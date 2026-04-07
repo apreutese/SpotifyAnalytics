@@ -196,7 +196,23 @@ if not df_top.empty:
     with tab_chart4:
         st.plotly_chart(chart_top_artists(df_top), width="stretch")
     with tab_table4:
-        st.dataframe(df_top, hide_index=True, width="stretch")
+        display_cols_p4 = [
+            c for c in ["artist_image_url", "artist", "liked_count", "top_rank"]
+            if c in df_top.columns
+        ]
+        col_config_p4 = {
+            "artist": st.column_config.TextColumn("Artista"),
+            "liked_count": st.column_config.NumberColumn("Canciones guardadas"),
+            "top_rank": st.column_config.NumberColumn("Ranking Top"),
+        }
+        if "artist_image_url" in display_cols_p4:
+            col_config_p4["artist_image_url"] = st.column_config.ImageColumn("Foto", width=60)
+        st.dataframe(
+            df_top[display_cols_p4],
+            hide_index=True,
+            use_container_width=True,
+            column_config=col_config_p4,
+        )
 else:
     st.info("Sin datos de artistas.", icon=":material/info:")
 

@@ -146,12 +146,15 @@ def fetch_liked_songs(sp: spotipy.Spotify, limit: int = 50) -> pd.DataFrame:
                 artist_name = artists[0]["name"] if artists else "Unknown"
                 artist_id = artists[0]["id"] if artists else None
 
+                album_images = album.get("images", [])
+
                 tracks.append({
                     "track_id": track.get("id"),
                     "track_name": track.get("name"),
                     "artist": artist_name,
                     "artist_id": artist_id,
                     "album": album.get("name"),
+                    "album_cover_url": album_images[0]["url"] if album_images else None,
                     "album_release_date": album.get("release_date"),
                     "duration_ms": track.get("duration_ms"),
                     "explicit": track.get("explicit"),
@@ -188,9 +191,11 @@ def fetch_top_artists(
     artists: list[dict] = []
 
     for i, item in enumerate(results.get("items", []), start=1):
+        images = item.get("images", [])
         artists.append({
             "artist_id": item.get("id"),
             "artist": item.get("name"),
+            "artist_image_url": images[0]["url"] if images else None,
             "genres": item.get("genres", []),
             "rank": i,
         })
