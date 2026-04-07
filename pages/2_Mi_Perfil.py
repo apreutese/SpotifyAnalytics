@@ -6,10 +6,10 @@ from src.spotify_client import (
     get_spotify_client,
     fetch_liked_songs,
     fetch_top_artists,
-    fetch_artist_genres,
     enrich_liked_with_hf,
 )
 from src.kpis_personal import (
+    build_artist_genres,
     kpi_my_genres,
     kpi_saved_timeline,
     kpi_my_audio_dna,
@@ -89,25 +89,15 @@ if date_filter and len(date_filter) == 2:
         & (liked_df["added_at"].dt.date <= end_date)
     ]
 
-# Fetch artist genres
-unique_artist_ids = liked_df["artist_id"].dropna().unique().tolist()
-artist_genres = fetch_artist_genres(sp, unique_artist_ids)
-
-rate_limited = all(len(g) == 0 for g in artist_genres.values()) if artist_genres else True
-
 # Enrich with HF audio features
 enriched_df = enrich_liked_with_hf(liked_df, hf_df)
+
+# Build artist genres from top_artists + HF data (0 extra API calls)
+artist_genres = build_artist_genres(top_artists_df, enriched_df)
 
 # ---------------------------------------------------------------------------
 # Metrics row
 # ---------------------------------------------------------------------------
-
-if rate_limited and artist_genres:
-    st.warning(
-        "Spotify ha limitado temporalmente las peticiones (rate limit). "
-        "Los géneros no están disponibles ahora. Vuelve a intentarlo en unas horas.",
-        icon=":material/schedule:",
-    )
 
 with st.container(horizontal=True):
     st.metric("Canciones guardadas", f"{len(liked_df):,}", border=True)

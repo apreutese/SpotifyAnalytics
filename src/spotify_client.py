@@ -2,6 +2,7 @@
 
 import logging
 import os
+import time
 from pathlib import Path
 
 import pandas as pd
@@ -175,7 +176,14 @@ def fetch_artist_genres(
     sp: spotipy.Spotify,
     artist_ids: list[str],
 ) -> dict[str, list[str]]:
-    """Fetch genres for a list of artist IDs in batches of 50.
+    """Fetch genres for a list of artist IDs.
+
+    Tries the batch endpoint first (50 per request). If it returns 403
+    (common in Spotify Development Mode), falls back to individual calls
+    with a small delay to avoid rate limiting.
+
+    Results are cached in ``st.session_state`` to avoid re-fetching on
+    every Streamlit rerun.
 
     Args:
         sp: Authenticated Spotify client.
@@ -184,23 +192,65 @@ def fetch_artist_genres(
     Returns:
         Dict mapping artist_id → list of genres.
     """
+    # Return cached result if available
+    if "artist_genres_cache" in st.session_state:
+        cache: dict[str, list[str]] = st.session_state["artist_genres_cache"]
+        missing = [aid for aid in artist_ids if aid and aid not in cache]
+        if not missing:
+            return {aid: cache.get(aid, []) for aid in artist_ids if aid}
+    else:
+        cache = {}
+        missing = list(set(aid for aid in artist_ids if aid))
+
     genres_map: dict[str, list[str]] = {}
-    unique_ids = list(set(aid for aid in artist_ids if aid))
+    unique_ids = list(set(missing))
 
+    if not unique_ids:
+        st.session_state["artist_genres_cache"] = cache
+        return {aid: cache.get(aid, []) for aid in artist_ids if aid}
+
+    # --- Try batch endpoint first ---
+    batch_ok = True
     with st.spinner(f"Obteniendo géneros de {len(unique_ids)} artistas…"):
-        for i in range(0, len(unique_ids), 50):
-            batch = unique_ids[i : i + 50]
-            try:
-                results = sp.artists(batch)
-                for artist in results.get("artists", []):
-                    if artist:
-                        genres_map[artist["id"]] = artist.get("genres", [])
-            except Exception as e:
-                logger.warning("Failed to fetch artist batch %d: %s", i, e)
-                for aid in batch:
-                    genres_map.setdefault(aid, [])
+        first_batch = unique_ids[:50]
+        try:
+            results = sp.artists(first_batch)
+            for artist in results.get("artists", []):
+                if artist:
+                    genres_map[artist["id"]] = artist.get("genres", [])
+        except Exception as e:
+            logger.warning("Batch endpoint failed (falling back to individual): %s", e)
+            batch_ok = False
 
-    return genres_map
+        if batch_ok:
+            # Batch works — continue with remaining batches
+            for i in range(50, len(unique_ids), 50):
+                batch = unique_ids[i : i + 50]
+                try:
+                    results = sp.artists(batch)
+                    for artist in results.get("artists", []):
+                        if artist:
+                            genres_map[artist["id"]] = artist.get("genres", [])
+                except Exception as e:
+                    logger.warning("Failed to fetch artist batch %d: %s", i, e)
+        else:
+            # Fallback — individual calls with delay
+            for idx, aid in enumerate(unique_ids):
+                try:
+                    artist = sp.artist(aid)
+                    genres_map[aid] = artist.get("genres", [])
+                except Exception as e:
+                    logger.warning("Failed to fetch artist %s: %s", aid, e)
+                    genres_map[aid] = []
+                # Small delay every 5 calls to stay under rate limits
+                if (idx + 1) % 5 == 0:
+                    time.sleep(0.3)
+
+    # Merge into cache and persist
+    cache.update(genres_map)
+    st.session_state["artist_genres_cache"] = cache
+
+    return {aid: cache.get(aid, []) for aid in artist_ids if aid}
 
 
 def enrich_liked_with_hf(

@@ -16,6 +16,51 @@ RADAR_FEATURES: list[str] = [
 MIN_HF_MATCHES: int = 20
 
 
+def build_artist_genres(
+    top_artists_df: pd.DataFrame,
+    enriched_df: pd.DataFrame,
+) -> dict[str, list[str]]:
+    """Build artist → genres mapping from already-available data.
+
+    Combines two free sources (no extra API calls):
+    - ``top_artists_df``: genres from ``sp.current_user_top_artists()``
+    - ``enriched_df``: genre column from HuggingFace dataset merge
+
+    Args:
+        top_artists_df: Top artists DataFrame with 'artist_id' and 'genres'.
+        enriched_df: Liked songs enriched with HF data (has 'genre' column).
+
+    Returns:
+        Dict mapping artist_id → list of genres.
+    """
+    genres_map: dict[str, list[str]] = {}
+
+    # Source 1: top artists (each has a genres list)
+    if not top_artists_df.empty and "genres" in top_artists_df.columns:
+        for _, row in top_artists_df.iterrows():
+            aid = row.get("artist_id")
+            gs = row.get("genres", [])
+            if aid and gs:
+                genres_map[aid] = gs if isinstance(gs, list) else []
+
+    # Source 2: HF dataset genre column (one genre per matched track)
+    if "genre" in enriched_df.columns:
+        hf_genres = (
+            enriched_df.dropna(subset=["artist_id", "genre"])
+            .groupby("artist_id")["genre"]
+            .apply(lambda x: list(x.unique()))
+            .to_dict()
+        )
+        for aid, gs in hf_genres.items():
+            if aid not in genres_map:
+                genres_map[aid] = gs
+            else:
+                existing = set(genres_map[aid])
+                genres_map[aid].extend(g for g in gs if g not in existing)
+
+    return genres_map
+
+
 def kpi_my_genres(
     liked_df: pd.DataFrame,
     artist_genres: dict[str, list[str]],
