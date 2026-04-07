@@ -4,24 +4,18 @@ import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
 
-# ---------------------------------------------------------------------------
-# Spotify palette
-# ---------------------------------------------------------------------------
-
-SPOTIFY_GREEN: str = "#1DB954"
-SPOTIFY_GREEN_LIGHT: str = "#1ED760"
-BG_COLOR: str = "rgba(0,0,0,0)"
-TEXT_COLOR: str = "#FFFFFF"
-
-
-def _base_layout() -> dict:
-    """Shared Plotly layout settings for Spotify theme."""
-    return dict(
-        paper_bgcolor=BG_COLOR,
-        plot_bgcolor=BG_COLOR,
-        font=dict(color=TEXT_COLOR, family="Inter, sans-serif"),
-        margin=dict(l=40, r=40, t=50, b=40),
-    )
+from src.theme import (
+    SPOTIFY_GREEN,
+    SPOTIFY_GREEN_LIGHT,
+    SPOTIFY_BLUE,
+    SPOTIFY_PURPLE,
+    BG_TRANSPARENT,
+    COLORSCALE_TREEMAP,
+    PLOTLY_PALETTE,
+    base_layout,
+    radar_trace_style,
+    radar_layout,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -43,7 +37,7 @@ def chart_my_genres(df_genres: pd.DataFrame) -> go.Figure:
         path=["genre"],
         values="count",
         color="count",
-        color_continuous_scale=["#181818", SPOTIFY_GREEN, SPOTIFY_GREEN_LIGHT],
+        color_continuous_scale=COLORSCALE_TREEMAP,
         custom_data=["pct"],
     )
     fig.update_traces(
@@ -53,7 +47,7 @@ def chart_my_genres(df_genres: pd.DataFrame) -> go.Figure:
     fig.update_layout(
         title="Mis Géneros",
         coloraxis_showscale=False,
-        **_base_layout(),
+        **base_layout(),
     )
     return fig
 
@@ -78,16 +72,16 @@ def chart_saved_timeline(df_timeline: pd.DataFrame) -> go.Figure:
         y=df_timeline["count"],
         mode="lines+markers",
         fill="tozeroy",
-        fillcolor="rgba(29, 185, 84, 0.2)",
-        line=dict(color=SPOTIFY_GREEN, width=2),
-        marker=dict(size=6, color=SPOTIFY_GREEN_LIGHT),
+        fillcolor="rgba(29, 185, 84, 0.15)",
+        line=dict(color=SPOTIFY_GREEN, width=2.5, shape="spline"),
+        marker=dict(size=6, color=SPOTIFY_GREEN_LIGHT, line=dict(width=1, color=SPOTIFY_GREEN)),
         hovertemplate="Mes: %{x}<br>Tracks guardados: %{y}<extra></extra>",
     ))
     fig.update_layout(
         title="Timeline de Canciones Guardadas",
         xaxis_title="Mes",
         yaxis_title="Tracks guardados",
-        **_base_layout(),
+        **base_layout(),
     )
     return fig
 
@@ -110,21 +104,10 @@ def chart_my_audio_dna(df_dna: pd.DataFrame) -> go.Figure:
     fig.add_trace(go.Scatterpolar(
         r=df_dna["value"].tolist() + [df_dna["value"].iloc[0]],
         theta=df_dna["feature"].tolist() + [df_dna["feature"].iloc[0]],
-        fill="toself",
-        fillcolor="rgba(29, 185, 84, 0.25)",
-        line=dict(color=SPOTIFY_GREEN, width=2),
-        name="Mi ADN",
+        **radar_trace_style("Mi ADN", SPOTIFY_GREEN),
     ))
-    fig.update_layout(
-        title="Mi ADN Musical",
-        polar=dict(
-            bgcolor=BG_COLOR,
-            radialaxis=dict(visible=True, range=[0, 1], color="#535353"),
-            angularaxis=dict(color=TEXT_COLOR),
-        ),
-        showlegend=False,
-        **_base_layout(),
-    )
+    fig.update_layout(**radar_layout("Mi ADN Musical"))
+    fig.update_layout(showlegend=False)
     return fig
 
 
@@ -142,22 +125,22 @@ def chart_genre_distribution(df_genres: pd.DataFrame) -> go.Figure:
     Returns:
         Plotly Figure.
     """
+    n = max(len(df_genres), 1)
+    colors = [
+        PLOTLY_PALETTE[i % len(PLOTLY_PALETTE)] for i in range(n)
+    ]
     fig = go.Figure(go.Pie(
         labels=df_genres["genre"],
         values=df_genres["count"],
         hole=0.5,
-        marker=dict(
-            colors=px.colors.sample_colorscale(
-                "Greens", [i / max(len(df_genres), 1) for i in range(len(df_genres))]
-            )
-        ),
+        marker=dict(colors=colors),
         textinfo="label+percent",
         hovertemplate="<b>%{label}</b><br>Count: %{value}<br>%{percent}<extra></extra>",
     ))
     fig.update_layout(
         title="Distribución de Géneros",
         showlegend=False,
-        **_base_layout(),
+        **base_layout(),
     )
     return fig
 
@@ -182,13 +165,13 @@ def chart_top_artists(df_artists: pd.DataFrame) -> go.Figure:
         x=df_sorted["liked_count"],
         y=df_sorted["artist"],
         orientation="h",
-        marker=dict(color=SPOTIFY_GREEN),
+        marker=dict(color=SPOTIFY_GREEN, line=dict(width=0), cornerradius=4),
         hovertemplate="<b>%{y}</b><br>Canciones guardadas: %{x}<extra></extra>",
     ))
     fig.update_layout(
         title="Mis Top Artistas (por canciones guardadas)",
         xaxis_title="Canciones guardadas",
         yaxis_title="",
-        **_base_layout(),
+        **base_layout(),
     )
     return fig

@@ -6,6 +6,7 @@ from src.spotify_client import (
     get_spotify_client,
     fetch_liked_songs,
     fetch_top_artists,
+    fetch_top_tracks,
     enrich_liked_with_hf,
 )
 from src.kpis_personal import (
@@ -23,8 +24,11 @@ from src.charts_personal import (
     chart_genre_distribution,
     chart_top_artists,
 )
+from src.theme import inject_premium_css
+from src.sidebar import render_sidebar_player
 
 st.set_page_config(page_title="Mi Perfil — SpotifyAnalytics", page_icon=":material/person:", layout="wide")
+inject_premium_css()
 
 st.title(":material/person: Mi Perfil")
 
@@ -33,6 +37,9 @@ st.title(":material/person: Mi Perfil")
 # ---------------------------------------------------------------------------
 
 sp = get_spotify_client()
+
+if sp is not None:
+    render_sidebar_player()
 
 if sp is None:
     st.info(
@@ -192,3 +199,58 @@ if not df_top.empty:
         st.dataframe(df_top, hide_index=True, width="stretch")
 else:
     st.info("Sin datos de artistas.", icon=":material/info:")
+
+st.space("small")
+
+# ---------------------------------------------------------------------------
+# P5 — Mis Top Tracks
+# ---------------------------------------------------------------------------
+
+st.subheader(":material/music_note: P5 · Mis top tracks")
+
+top_tracks_df = fetch_top_tracks(sp, time_range=time_range)
+
+if not top_tracks_df.empty:
+    display_cols = [
+        c for c in ["rank", "album_cover_url", "track_name", "artist", "album"]
+        if c in top_tracks_df.columns
+    ]
+    col_config_tt = {
+        "rank": st.column_config.NumberColumn("#", width=50),
+        "track_name": st.column_config.TextColumn("Track"),
+        "artist": st.column_config.TextColumn("Artista"),
+        "album": st.column_config.TextColumn("Álbum"),
+    }
+    if "album_cover_url" in display_cols:
+        col_config_tt["album_cover_url"] = st.column_config.ImageColumn("Cover", width=60)
+
+    st.dataframe(
+        top_tracks_df[display_cols],
+        use_container_width=True,
+        hide_index=True,
+        column_config=col_config_tt,
+    )
+
+    # Embed player for selected track
+    st.caption(":material/headphones: Selecciona un track para escucharlo")
+    track_options = {
+        row["track_id"]: f"{row['rank']}. {row['track_name']} — {row['artist']}"
+        for _, row in top_tracks_df.iterrows()
+    }
+    selected_track = st.selectbox(
+        "Reproducir track",
+        options=list(track_options.keys()),
+        format_func=lambda x: track_options[x],
+        label_visibility="collapsed",
+    )
+    if selected_track:
+        embed_html = (
+            f'<iframe src="https://open.spotify.com/embed/track/{selected_track}'
+            f'?theme=0" width="100%" height="152" frameBorder="0" '
+            f'allow="autoplay; clipboard-write; encrypted-media; '
+            f'fullscreen; picture-in-picture" loading="lazy" '
+            f'style="border-radius:12px"></iframe>'
+        )
+        st.html(embed_html)
+else:
+    st.info("Sin datos de top tracks.", icon=":material/info:")

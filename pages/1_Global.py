@@ -15,8 +15,10 @@ from src.charts_global import (
     chart_sentiment_by_year,
     chart_popularity_distribution,
 )
+from src.theme import inject_premium_css
 
 st.set_page_config(page_title="Global — SpotifyAnalytics", page_icon=":material/public:", layout="wide")
+inject_premium_css()
 
 # ---------------------------------------------------------------------------
 # Data

@@ -14,7 +14,12 @@ from spotipy.oauth2 import SpotifyOAuth
 
 load_dotenv()
 
-SCOPES: str = "user-library-read user-top-read playlist-read-private"
+SCOPES: str = (
+    "user-library-read user-top-read playlist-read-private "
+    "user-read-playback-state user-modify-playback-state "
+    "user-read-currently-playing user-read-recently-played "
+    "user-read-private"
+)
 
 
 def main() -> None:

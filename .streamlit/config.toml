@@ -1,10 +1,15 @@
 [theme]
 base = "dark"
 primaryColor = "#1DB954"
-backgroundColor = "#121212"
-secondaryBackgroundColor = "#181818"
-textColor = "#FFFFFF"
-font = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
-codeFont = "'Fira Code':https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&display=swap"
-chartCategoricalColors = ["#1DB954", "#1ED760", "#535353", "#B3B3B3", "#509BF5", "#AF2896"]
-baseRadius = "0.5rem"
+backgroundColor = "#0A0A0A"
+secondaryBackgroundColor = "#141414"
+textColor = "#EAEAEA"
+borderColor = "#252525"
+font = "'Space Grotesk':https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap"
+codeFont = "'JetBrains Mono':https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap"
+chartCategoricalColors = ["#1DB954", "#509BF5", "#AF2896", "#1ED760", "#E8115B", "#F59B23", "#B3B3B3", "#535353"]
+baseRadius = "0.75rem"
+
+[theme.sidebar]
+backgroundColor = "#0F0F0F"
+textColor = "#EAEAEA"
