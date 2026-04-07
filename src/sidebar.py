@@ -25,15 +25,22 @@ def render_sidebar_player(sp=None) -> None:
     with st.sidebar:
         st.space("small")
 
-        # User profile at top of sidebar
+        # User profile at top of sidebar — compact badge
         try:
             profile = fetch_user_profile(sp)
-            if profile.get("image_url"):
-                with st.container(horizontal=True):
-                    st.image(profile["image_url"], width=40)
-                    st.markdown(f"**{profile['display_name']}**")
+            name = profile.get("display_name", "Usuario")
+            img_url = profile.get("image_url", "")
+            if img_url:
+                st.markdown(
+                    f'<div style="display:flex;align-items:center;gap:10px">'
+                    f'<img src="{img_url}" '
+                    f'style="width:32px;height:32px;border-radius:50%;object-fit:cover">'
+                    f'<span style="font-weight:600;font-size:0.9rem">{name}</span>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
             else:
-                st.caption(f":material/person: **{profile.get('display_name', 'Usuario')}**")
+                st.caption(f":material/person: **{name}**")
         except Exception:
             pass
 
