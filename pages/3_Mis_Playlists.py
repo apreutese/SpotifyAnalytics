@@ -310,6 +310,30 @@ elif "Comparar" in mode:
                 st.metric("Artistas", f"{sb['unique_artists']:,}", border=True)
                 st.metric("Géneros", f"{sb['unique_genres']:,}", border=True)
 
+        # Playlist embeds side by side
+        import streamlit.components.v1 as components
+
+        st.space("small")
+        emb_a, emb_b = st.columns(2)
+        with emb_a:
+            components.html(
+                f'<iframe src="https://open.spotify.com/embed/playlist/{id_a}'
+                f'?theme=0" width="100%" height="352" frameBorder="0" '
+                f'allow="autoplay; clipboard-write; encrypted-media; '
+                f'fullscreen; picture-in-picture" loading="lazy" '
+                f'style="border-radius:12px"></iframe>',
+                height=362,
+            )
+        with emb_b:
+            components.html(
+                f'<iframe src="https://open.spotify.com/embed/playlist/{id_b}'
+                f'?theme=0" width="100%" height="352" frameBorder="0" '
+                f'allow="autoplay; clipboard-write; encrypted-media; '
+                f'fullscreen; picture-in-picture" loading="lazy" '
+                f'style="border-radius:12px"></iframe>',
+                height=362,
+            )
+
         # Radar comparison
         st.space("small")
         dna_a, dna_b = analysis_a["dna"], analysis_b["dna"]
@@ -330,16 +354,59 @@ elif "Comparar" in mode:
         # Shared artists
         st.space("small")
         st.subheader(":material/group: Artistas compartidos")
-        artists_a = set(analysis_a["tracks_df"]["artist"].dropna().unique())
-        artists_b = set(analysis_b["tracks_df"]["artist"].dropna().unique())
+
+        df_a = analysis_a["tracks_df"]
+        df_b = analysis_b["tracks_df"]
+        artists_a = set(df_a["artist"].dropna().unique())
+        artists_b = set(df_b["artist"].dropna().unique())
         shared = artists_a & artists_b
 
         if shared:
             st.caption(f"{len(shared)} artistas en común")
-            st.dataframe(
-                {"Artista": sorted(shared)},
-                use_container_width=True,
-                hide_index=True,
-            )
+
+            # Build artist info: image, track counts per playlist
+            artist_info: list[dict] = []
+            for artist_name in sorted(shared):
+                rows_a = df_a[df_a["artist"] == artist_name]
+                rows_b = df_b[df_b["artist"] == artist_name]
+                # Use first album cover as representative image
+                img = None
+                if "album_cover_url" in df_a.columns:
+                    imgs = rows_a["album_cover_url"].dropna()
+                    if not imgs.empty:
+                        img = imgs.iloc[0]
+                if img is None and "album_cover_url" in df_b.columns:
+                    imgs = rows_b["album_cover_url"].dropna()
+                    if not imgs.empty:
+                        img = imgs.iloc[0]
+                artist_info.append({
+                    "name": artist_name,
+                    "img": img,
+                    "count_a": len(rows_a),
+                    "count_b": len(rows_b),
+                })
+
+            # Render as cards in a 3-column grid
+            for row_start in range(0, len(artist_info), 3):
+                cols = st.columns(3)
+                for col_idx, col in enumerate(cols):
+                    idx = row_start + col_idx
+                    if idx >= len(artist_info):
+                        break
+                    info = artist_info[idx]
+                    with col:
+                        with st.container(border=True):
+                            c_img, c_info = st.columns([1, 3])
+                            with c_img:
+                                if info["img"]:
+                                    st.image(info["img"], width=56)
+                                else:
+                                    st.markdown(":material/person:")
+                            with c_info:
+                                st.markdown(f"**{info['name']}**")
+                                st.caption(
+                                    f"{info['count_a']} tracks en A · "
+                                    f"{info['count_b']} tracks en B"
+                                )
         else:
             st.caption("No hay artistas compartidos entre estas playlists.")
