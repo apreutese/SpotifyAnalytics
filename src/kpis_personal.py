@@ -15,6 +15,16 @@ RADAR_FEATURES: list[str] = [
 
 MIN_HF_MATCHES: int = 20
 
+# Genres that are pure languages/nationalities (not musical styles)
+LANGUAGE_GENRES: set[str] = {
+    "spanish", "swedish", "german", "french", "italian", "portuguese",
+    "turkish", "japanese", "korean", "chinese", "arabic", "russian",
+    "polish", "dutch", "norwegian", "finnish", "danish", "greek",
+    "thai", "indonesian", "malaysian", "vietnamese", "hindi",
+    "filipino", "hebrew", "czech", "hungarian", "romanian",
+    "bulgarian", "croatian", "serbian", "ukrainian", "persian",
+}
+
 
 def build_artist_genres(
     top_artists_df: pd.DataFrame,
@@ -41,7 +51,8 @@ def build_artist_genres(
             aid = row.get("artist_id")
             gs = row.get("genres", [])
             if aid and gs:
-                genres_map[aid] = gs if isinstance(gs, list) else []
+                filtered = [g for g in gs if g.lower() not in LANGUAGE_GENRES]
+                genres_map[aid] = filtered if isinstance(gs, list) else []
 
     # Source 2: HF dataset genre column (one genre per matched track)
     if "genre" in enriched_df.columns:
@@ -52,11 +63,12 @@ def build_artist_genres(
             .to_dict()
         )
         for aid, gs in hf_genres.items():
+            filtered = [g for g in gs if g.lower() not in LANGUAGE_GENRES]
             if aid not in genres_map:
-                genres_map[aid] = gs
+                genres_map[aid] = filtered
             else:
                 existing = set(genres_map[aid])
-                genres_map[aid].extend(g for g in gs if g not in existing)
+                genres_map[aid].extend(g for g in filtered if g not in existing)
 
     return genres_map
 
