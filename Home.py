@@ -36,9 +36,9 @@ has_year: bool = "year" in df.columns
 # Auth check (non-blocking)
 # ---------------------------------------------------------------------------
 
-from src.spotify_client import get_spotify_client, fetch_user_profile, fetch_currently_playing
+from src.spotify_client import get_spotify_client_silent, fetch_user_profile, fetch_currently_playing
 
-sp = get_spotify_client()
+sp = get_spotify_client_silent()
 profile: dict | None = None
 currently_playing: dict | None = None
 
@@ -56,7 +56,7 @@ is_authenticated: bool = sp is not None and profile is not None
 
 # Sidebar mini-player (only if authenticated)
 if is_authenticated:
-    render_sidebar_player()
+    render_sidebar_player(sp)
 
 # ---------------------------------------------------------------------------
 # Header — personalised greeting or generic title

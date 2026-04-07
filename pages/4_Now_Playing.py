@@ -35,7 +35,7 @@ st.title(":material/headphones: Now Playing")
 sp = get_spotify_client()
 
 if sp is not None:
-    render_sidebar_player()
+    render_sidebar_player(sp)
 
 if sp is None:
     st.info(

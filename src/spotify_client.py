@@ -92,6 +92,28 @@ def get_spotify_client() -> spotipy.Spotify | None:
     return None
 
 
+def get_spotify_client_silent() -> spotipy.Spotify | None:
+    """Try to get an authenticated Spotify client without showing UI.
+
+    Unlike ``get_spotify_client()``, this will NOT render a login button
+    if the user is not authenticated. Useful for pages that should
+    gracefully degrade (e.g. Home).
+
+    Returns:
+        Authenticated Spotify client or None.
+    """
+    if not CLIENT_ID or not CLIENT_SECRET:
+        return None
+
+    oauth = _get_oauth_manager()
+    token_info = oauth.get_cached_token()
+
+    if token_info:
+        return spotipy.Spotify(auth=token_info["access_token"])
+
+    return None
+
+
 # ---------------------------------------------------------------------------
 # Data fetching
 # ---------------------------------------------------------------------------

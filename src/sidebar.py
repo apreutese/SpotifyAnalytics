@@ -3,14 +3,14 @@
 import streamlit as st
 
 
-def render_sidebar_player() -> None:
+def render_sidebar_player(sp=None) -> None:
     """Render a mini-player in the sidebar if the user is authenticated.
 
-    Checks for a cached Spotify client in session_state to avoid
-    re-authenticating. Shows currently playing track with controls.
+    Args:
+        sp: Authenticated Spotify client. If None, attempts to get one
+            silently (without showing login button).
     """
     from src.spotify_client import (
-        get_spotify_client,
         fetch_currently_playing,
         fetch_user_profile,
         player_play,
@@ -19,7 +19,6 @@ def render_sidebar_player() -> None:
         player_previous,
     )
 
-    sp = get_spotify_client()
     if sp is None:
         return
 
