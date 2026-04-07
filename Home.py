@@ -96,6 +96,7 @@ if is_authenticated and currently_playing:
         with cp_col_embed:
             track_id = currently_playing.get("track_id", "")
             if track_id:
+                import streamlit.components.v1 as components
                 embed_html = (
                     f'<iframe src="https://open.spotify.com/embed/track/{track_id}'
                     f'?theme=0" width="100%" height="152" frameBorder="0" '
@@ -103,7 +104,7 @@ if is_authenticated and currently_playing:
                     f'fullscreen; picture-in-picture" loading="lazy" '
                     f'style="border-radius:12px"></iframe>'
                 )
-                st.html(embed_html)
+                components.html(embed_html, height=160)
     st.space("small")
 
 # ---------------------------------------------------------------------------

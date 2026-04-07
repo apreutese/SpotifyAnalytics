@@ -103,11 +103,12 @@ def _analyse_playlist(playlist_id: str, playlist_name: str) -> dict | None:
         None if the playlist has no tracks.
     """
     cache_key = f"pl_tracks_{playlist_id}"
-    if cache_key in st.session_state:
+    if cache_key in st.session_state and not st.session_state[cache_key].empty:
         tracks_df = st.session_state[cache_key]
     else:
         tracks_df = fetch_playlist_tracks(sp, playlist_id)
-        st.session_state[cache_key] = tracks_df
+        if not tracks_df.empty:
+            st.session_state[cache_key] = tracks_df
 
     if tracks_df.empty:
         return None

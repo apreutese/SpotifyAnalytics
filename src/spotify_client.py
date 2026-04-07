@@ -402,9 +402,11 @@ def fetch_playlist_tracks(
         while True:
             results = sp.playlist_items(
                 playlist_id, limit=100, offset=offset,
-                fields="items(added_at,track(id,name,duration_ms,explicit,"
-                       "artists(id,name),album(name,release_date,images))),"
-                       "total",
+                fields=(
+                    "items(added_at,track(id,name,duration_ms,explicit,"
+                    "artists(id,name),album(name,release_date,images))),"
+                    "total"
+                ),
             )
             items = results.get("items", [])
             if not items:

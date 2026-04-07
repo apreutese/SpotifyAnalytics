@@ -260,6 +260,7 @@ if not top_tracks_df.empty:
         label_visibility="collapsed",
     )
     if selected_track:
+        import streamlit.components.v1 as components
         embed_html = (
             f'<iframe src="https://open.spotify.com/embed/track/{selected_track}'
             f'?theme=0" width="100%" height="152" frameBorder="0" '
@@ -267,6 +268,6 @@ if not top_tracks_df.empty:
             f'fullscreen; picture-in-picture" loading="lazy" '
             f'style="border-radius:12px"></iframe>'
         )
-        st.html(embed_html)
+        components.html(embed_html, height=160)
 else:
     st.info("Sin datos de top tracks.", icon=":material/info:")
