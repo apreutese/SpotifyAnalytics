@@ -29,11 +29,9 @@ def render_sidebar_player(sp=None) -> None:
         try:
             profile = fetch_user_profile(sp)
             if profile.get("image_url"):
-                col_img, col_name = st.columns([1, 3])
-                with col_img:
+                with st.container(horizontal=True):
                     st.image(profile["image_url"], width=40)
-                with col_name:
-                    st.caption(f"**{profile['display_name']}**")
+                    st.markdown(f"**{profile['display_name']}**")
             else:
                 st.caption(f":material/person: **{profile.get('display_name', 'Usuario')}**")
         except Exception:
