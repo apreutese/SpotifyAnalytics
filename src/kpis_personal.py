@@ -65,7 +65,10 @@ def kpi_my_genres(
     liked_df: pd.DataFrame,
     artist_genres: dict[str, list[str]],
 ) -> pd.DataFrame:
-    """Count genres from liked songs' artists.
+    """Count genres weighted by liked songs per artist.
+
+    Each liked song contributes its artist's genres to the count,
+    so artists with more saved songs have more weight.
 
     Args:
         liked_df: Liked songs DataFrame with 'artist_id'.
@@ -75,7 +78,7 @@ def kpi_my_genres(
         DataFrame with columns [genre, count, pct].
     """
     all_genres: list[str] = []
-    for aid in liked_df["artist_id"].dropna().unique():
+    for aid in liked_df["artist_id"].dropna():
         all_genres.extend(artist_genres.get(aid, []))
 
     if not all_genres:
