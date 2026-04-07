@@ -400,20 +400,21 @@ def fetch_playlist_tracks(
 
     with st.spinner("Obteniendo tracks de la playlist…"):
         while True:
-            results = sp.playlist_items(
-                playlist_id, limit=100, offset=offset,
-                fields=(
-                    "items(added_at,track(id,name,duration_ms,explicit,"
-                    "artists(id,name),album(name,release_date,images))),"
-                    "total"
-                ),
-            )
+            try:
+                results = sp.playlist_items(
+                    playlist_id, limit=100, offset=offset,
+                )
+            except Exception as e:
+                logger.error("playlist_items failed for %s: %s", playlist_id, e)
+                break
+
             items = results.get("items", [])
             if not items:
                 break
 
             for item in items:
-                track = item.get("track")
+                # Feb 2026 API returns "item" instead of "track"
+                track = item.get("track") or item.get("item")
                 if not track or not track.get("id"):
                     continue
                 album = track.get("album", {})
@@ -436,7 +437,10 @@ def fetch_playlist_tracks(
                 })
 
             offset += 100
-            if offset >= results.get("total", 0):
+            total = results.get("total", 0)
+            if total and offset >= total:
+                break
+            if not results.get("next"):
                 break
 
     df = pd.DataFrame(tracks)
