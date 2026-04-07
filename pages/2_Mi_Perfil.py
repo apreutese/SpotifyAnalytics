@@ -258,15 +258,15 @@ if not top_tracks_df.empty:
                         ):
                             st.session_state["p5_selected_track"] = row["track_id"]
 
-    # Show embed for selected track
+    # Show embed for selected track (large format — shows album context)
     selected_tt = st.session_state.get("p5_selected_track", top_10.iloc[0]["track_id"])
     embed_html = (
         f'<iframe src="https://open.spotify.com/embed/track/{selected_tt}'
-        f'?theme=0" width="100%" height="152" frameBorder="0" '
+        f'?theme=0" width="100%" height="352" frameBorder="0" '
         f'allow="autoplay; clipboard-write; encrypted-media; '
         f'fullscreen; picture-in-picture" loading="lazy" '
         f'style="border-radius:12px"></iframe>'
     )
-    components.html(embed_html, height=160)
+    components.html(embed_html, height=362)
 else:
     st.info("Sin datos de top tracks.", icon=":material/info:")
