@@ -1,126 +1,32 @@
-"""KPI calculation functions for the Personal page."""
+"""KPI calculation functions for the Personal / Playlist pages.
+
+All KPIs here use only basic track metadata (no audio features, no genres).
+"""
 
 import pandas as pd
 
-from src.data_loader import AUDIO_FEATURES
 
-RADAR_FEATURES: list[str] = [
-    "danceability",
-    "energy",
-    "valence",
-    "acousticness",
-    "instrumentalness",
-    "tempo",
-]
-
-MIN_HF_MATCHES: int = 20
-
-# Genres that are pure languages/nationalities (not musical styles)
-LANGUAGE_GENRES: set[str] = {
-    "spanish", "swedish", "german", "french", "italian", "portuguese",
-    "turkish", "japanese", "korean", "chinese", "arabic", "russian",
-    "polish", "dutch", "norwegian", "finnish", "danish", "greek",
-    "thai", "indonesian", "malaysian", "vietnamese", "hindi",
-    "filipino", "hebrew", "czech", "hungarian", "romanian",
-    "bulgarian", "croatian", "serbian", "ukrainian", "persian",
-}
+# ---------------------------------------------------------------------------
+# P1 — Saved Timeline
+# ---------------------------------------------------------------------------
 
 
-def build_artist_genres(
-    top_artists_df: pd.DataFrame,
-    enriched_df: pd.DataFrame,
-) -> dict[str, list[str]]:
-    """Build artist → genres mapping from already-available data.
-
-    Combines two free sources (no extra API calls):
-    - ``top_artists_df``: genres from ``sp.current_user_top_artists()``
-    - ``enriched_df``: genre column from HuggingFace dataset merge
+def kpi_saved_timeline(df: pd.DataFrame) -> pd.DataFrame:
+    """Group tracks by month of added_at.
 
     Args:
-        top_artists_df: Top artists DataFrame with 'artist_id' and 'genres'.
-        enriched_df: Liked songs enriched with HF data (has 'genre' column).
-
-    Returns:
-        Dict mapping artist_id → list of genres.
-    """
-    genres_map: dict[str, list[str]] = {}
-
-    # Source 1: top artists (each has a genres list)
-    if not top_artists_df.empty and "genres" in top_artists_df.columns:
-        for _, row in top_artists_df.iterrows():
-            aid = row.get("artist_id")
-            gs = row.get("genres", [])
-            if aid and gs:
-                filtered = [g for g in gs if g.lower() not in LANGUAGE_GENRES]
-                genres_map[aid] = filtered if isinstance(gs, list) else []
-
-    # Source 2: HF dataset genre column (one genre per matched track)
-    if "genre" in enriched_df.columns:
-        hf_genres = (
-            enriched_df.dropna(subset=["artist_id", "genre"])
-            .groupby("artist_id")["genre"]
-            .apply(lambda x: list(x.unique()))
-            .to_dict()
-        )
-        for aid, gs in hf_genres.items():
-            filtered = [g for g in gs if g.lower() not in LANGUAGE_GENRES]
-            if aid not in genres_map:
-                genres_map[aid] = filtered
-            else:
-                existing = set(genres_map[aid])
-                genres_map[aid].extend(g for g in filtered if g not in existing)
-
-    return genres_map
-
-
-def kpi_my_genres(
-    liked_df: pd.DataFrame,
-    artist_genres: dict[str, list[str]],
-) -> pd.DataFrame:
-    """Count genres weighted by liked songs per artist.
-
-    Each liked song contributes its artist's genres to the count,
-    so artists with more saved songs have more weight.
-
-    Args:
-        liked_df: Liked songs DataFrame with 'artist_id'.
-        artist_genres: Dict mapping artist_id → list of genres.
-
-    Returns:
-        DataFrame with columns [genre, count, pct].
-    """
-    all_genres: list[str] = []
-    for aid in liked_df["artist_id"].dropna():
-        all_genres.extend(artist_genres.get(aid, []))
-
-    if not all_genres:
-        return pd.DataFrame(columns=["genre", "count", "pct"])
-
-    counts = (
-        pd.Series(all_genres)
-        .value_counts()
-        .head(20)
-        .reset_index()
-    )
-    counts.columns = ["genre", "count"]
-    counts["pct"] = (counts["count"] / counts["count"].sum() * 100).round(1)
-    return counts
-
-
-def kpi_saved_timeline(liked_df: pd.DataFrame) -> pd.DataFrame:
-    """Group liked songs by month of added_at.
-
-    Args:
-        liked_df: Liked songs DataFrame with 'added_at' datetime column.
+        df: DataFrame with 'added_at' datetime column.
 
     Returns:
         DataFrame with columns [month, count].
     """
-    if liked_df.empty or "added_at" not in liked_df.columns:
+    if df.empty or "added_at" not in df.columns:
         return pd.DataFrame(columns=["month", "count"])
 
-    temp = liked_df.copy()
-    temp["month"] = temp["added_at"].dt.tz_localize(None).dt.to_period("M").astype(str)
+    temp = df.copy()
+    if temp["added_at"].dt.tz is not None:
+        temp["added_at"] = temp["added_at"].dt.tz_localize(None)
+    temp["month"] = temp["added_at"].dt.to_period("M").astype(str)
     result = (
         temp.groupby("month")
         .size()
@@ -130,53 +36,111 @@ def kpi_saved_timeline(liked_df: pd.DataFrame) -> pd.DataFrame:
     return result
 
 
-def kpi_my_audio_dna(liked_df: pd.DataFrame) -> pd.DataFrame | None:
-    """Mean audio features from liked songs matched with HF dataset.
+# ---------------------------------------------------------------------------
+# P2 — Release Decades
+# ---------------------------------------------------------------------------
+
+
+def kpi_release_decades(df: pd.DataFrame) -> pd.DataFrame:
+    """Distribution of tracks by release decade.
 
     Args:
-        liked_df: Enriched liked songs DataFrame (with audio feature columns).
+        df: DataFrame with 'album_release_date' column (str, e.g. '2002-07-09').
 
     Returns:
-        DataFrame with columns [feature, value] or None if < MIN_HF_MATCHES.
+        DataFrame with columns [decade, count, pct] sorted by decade.
     """
-    matched = liked_df.dropna(subset=[RADAR_FEATURES[0]])
-    if len(matched) < MIN_HF_MATCHES:
-        return None
+    if df.empty or "album_release_date" not in df.columns:
+        return pd.DataFrame(columns=["decade", "count", "pct"])
 
-    means = matched[RADAR_FEATURES].mean()
-    if "tempo" in means.index:
-        means["tempo"] = means["tempo"] / 250.0
-    if "loudness" in means.index:
-        means["loudness"] = (means["loudness"] + 60.0) / 60.0
+    temp = df.dropna(subset=["album_release_date"]).copy()
+    temp["year"] = pd.to_numeric(
+        temp["album_release_date"].astype(str).str[:4], errors="coerce"
+    )
+    temp = temp.dropna(subset=["year"])
+    temp["decade"] = (temp["year"] // 10 * 10).astype(int).astype(str) + "s"
 
-    result = means.reset_index()
-    result.columns = ["feature", "value"]
-    result["value"] = result["value"].round(3)
-    return result
-
-
-def kpi_genre_distribution(
-    artist_genres: dict[str, list[str]],
-) -> pd.DataFrame:
-    """Full genre distribution (fallback for P3).
-
-    Args:
-        artist_genres: Dict mapping artist_id → list of genres.
-
-    Returns:
-        DataFrame with columns [genre, count, pct].
-    """
-    all_genres: list[str] = []
-    for genres in artist_genres.values():
-        all_genres.extend(genres)
-
-    if not all_genres:
-        return pd.DataFrame(columns=["genre", "count", "pct"])
-
-    counts = pd.Series(all_genres).value_counts().reset_index()
-    counts.columns = ["genre", "count"]
-    counts["pct"] = (counts["count"] / counts["count"].sum() * 100).round(1)
+    counts = (
+        temp.groupby("decade")
+        .size()
+        .reset_index(name="count")
+        .sort_values("decade")
+    )
+    total = counts["count"].sum()
+    counts["pct"] = (counts["count"] / total * 100).round(1) if total else 0
     return counts
+
+
+# ---------------------------------------------------------------------------
+# P3 — Explicit vs Clean
+# ---------------------------------------------------------------------------
+
+
+def kpi_explicit_ratio(df: pd.DataFrame) -> pd.DataFrame:
+    """Proportion of explicit vs clean tracks.
+
+    Args:
+        df: DataFrame with 'explicit' column (bool or str).
+
+    Returns:
+        DataFrame with columns [label, count, pct].
+    """
+    if df.empty or "explicit" not in df.columns:
+        return pd.DataFrame(columns=["label", "count", "pct"])
+
+    temp = df.copy()
+    temp["is_explicit"] = temp["explicit"].astype(str).str.lower().isin(["true", "1"])
+    n_explicit = temp["is_explicit"].sum()
+    n_clean = len(temp) - n_explicit
+    total = len(temp)
+
+    rows = [
+        {"label": "Explicit", "count": int(n_explicit), "pct": round(n_explicit / total * 100, 1) if total else 0},
+        {"label": "Clean", "count": int(n_clean), "pct": round(n_clean / total * 100, 1) if total else 0},
+    ]
+    return pd.DataFrame(rows)
+
+
+# ---------------------------------------------------------------------------
+# P4 — Top Albums
+# ---------------------------------------------------------------------------
+
+
+def kpi_top_albums(df: pd.DataFrame, top_n: int = 15) -> pd.DataFrame:
+    """Albums with most saved/playlist tracks.
+
+    Args:
+        df: DataFrame with 'album' and optionally 'album_cover_url' columns.
+        top_n: Number of top albums to return.
+
+    Returns:
+        DataFrame with columns [album, count] (+ album_cover_url if available).
+    """
+    if df.empty or "album" not in df.columns:
+        return pd.DataFrame(columns=["album", "count"])
+
+    counts = (
+        df.groupby("album")
+        .size()
+        .reset_index(name="count")
+        .sort_values("count", ascending=False)
+        .head(top_n)
+    )
+
+    if "album_cover_url" in df.columns:
+        first_cover = (
+            df.dropna(subset=["album_cover_url"])
+            .drop_duplicates(subset=["album"])
+            [["album", "album_cover_url"]]
+        )
+        counts = counts.merge(first_cover, on="album", how="left")
+
+    return counts.reset_index(drop=True)
+
+
+# ---------------------------------------------------------------------------
+# P5 — Top Artists (by saved count + ranking)
+# ---------------------------------------------------------------------------
 
 
 def kpi_top_artists(

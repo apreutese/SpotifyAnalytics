@@ -179,3 +179,35 @@ else:
         )
     with tab_table4:
         st.dataframe(df_dist, hide_index=True, width="stretch")
+
+# ---------------------------------------------------------------------------
+# G5 — Top 100 Playlist Player
+# ---------------------------------------------------------------------------
+
+st.space("small")
+st.subheader(":material/headphones: G5 · Top 100 más populares")
+
+top100 = (
+    filtered
+    .dropna(subset=["track_id"])
+    .nlargest(100, "popularity")
+    [["track_id", "track_name", "artist", "duration_ms"]]
+    .copy()
+)
+
+# Add album_cover_url placeholder (HF dataset doesn't have cover art)
+if "album_cover_url" not in top100.columns:
+    top100["album_cover_url"] = None
+
+if not top100.empty:
+    from src.components.playlist_player import render_playlist
+    from src.spotify_auth import get_access_token
+
+    _token = get_access_token()
+    render_playlist(
+        top100,
+        mode="sdk" if _token else "embed",
+        title="Top 100 — Más Populares",
+        key="global_top100",
+        token=_token,
+    )

@@ -18,8 +18,9 @@ env/
 .DS_Store
 Thumbs.db
 
-# Data (large files)
-data/*.csv
+# Data: track local CSVs and parquet (committed for offline use)
+# Only ignore very large raw downloads
+data/raw/
 
 # Streamlit secrets (config.toml IS tracked)
 .streamlit/secrets.toml

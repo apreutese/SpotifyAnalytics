@@ -1,6 +1,7 @@
 import streamlit as st
 
 from src.data_loader import get_global_dataframe
+from src.personal_loader import has_personal_data
 from src.theme import inject_premium_css
 from src.sidebar import render_sidebar_player
 
@@ -16,14 +17,14 @@ inject_premium_css()
 # ---------------------------------------------------------------------------
 
 if "code" in st.query_params:
-    from src.spotify_client import _get_oauth_manager
+    from src.spotify_auth import _get_oauth_manager
     oauth = _get_oauth_manager()
     try:
         oauth.get_access_token(st.query_params["code"], as_dict=False)
     except Exception:
         pass
     st.query_params.clear()
-    st.switch_page("pages/2_Mi_Perfil.py")
+    st.switch_page("pages/3_Mi_Perfil.py")
 
 # ---------------------------------------------------------------------------
 # Data
@@ -36,23 +37,20 @@ has_year: bool = "year" in df.columns
 # Auth check (non-blocking)
 # ---------------------------------------------------------------------------
 
-from src.spotify_client import get_spotify_client_silent, fetch_user_profile, fetch_currently_playing
+from src.spotify_auth import get_spotify_client_silent
+from src.spotify_data import fetch_user_profile
 
 sp = get_spotify_client_silent()
 profile: dict | None = None
-currently_playing: dict | None = None
 
 if sp is not None:
     try:
         profile = fetch_user_profile(sp)
     except Exception:
         profile = None
-    try:
-        currently_playing = fetch_currently_playing(sp)
-    except Exception:
-        currently_playing = None
 
 is_authenticated: bool = sp is not None and profile is not None
+has_csv_personal: bool = has_personal_data()
 
 # Sidebar mini-player (only if authenticated)
 if is_authenticated:
@@ -81,31 +79,6 @@ else:
     )
 
 st.space("small")
-
-# ---------------------------------------------------------------------------
-# Currently Playing embed (authenticated only)
-# ---------------------------------------------------------------------------
-
-if is_authenticated and currently_playing:
-    with st.container(border=True):
-        cp_col_info, cp_col_embed = st.columns([1, 2])
-        with cp_col_info:
-            st.caption(":material/play_circle: ESCUCHANDO AHORA")
-            st.markdown(f"### {currently_playing['track_name']}")
-            st.caption(f"{currently_playing['artist']} — {currently_playing['album']}")
-        with cp_col_embed:
-            track_id = currently_playing.get("track_id", "")
-            if track_id:
-                import streamlit.components.v1 as components
-                embed_html = (
-                    f'<iframe src="https://open.spotify.com/embed/track/{track_id}'
-                    f'?theme=0" width="100%" height="152" frameBorder="0" '
-                    f'allow="autoplay; clipboard-write; encrypted-media; '
-                    f'fullscreen; picture-in-picture" loading="lazy" '
-                    f'style="border-radius:12px"></iframe>'
-                )
-                components.html(embed_html, height=160)
-    st.space("small")
 
 # ---------------------------------------------------------------------------
 # Dataset metrics
@@ -141,47 +114,75 @@ else:
     st.caption(":material/info: Dataset Kaggle no encontrado — funcionando solo con HuggingFace.")
 
 # ---------------------------------------------------------------------------
-# Navigation cards
+# Navigation cards — two blocks: CSV (offline) vs Spotify API (OAuth)
 # ---------------------------------------------------------------------------
 
 st.space("medium")
 
+# Block 1: CSV-based (always available)
+st.subheader(":material/storage: Datos locales (CSV)")
+st.caption("Disponibles sin conexión a Spotify.")
+
+col_csv1, col_csv2 = st.columns(2)
+with col_csv1:
+    with st.container(border=True):
+        st.markdown(":material/public: **Global**")
+        st.caption("114k+ tracks: géneros, audio features, tendencias por década.")
+        st.page_link("pages/1_Global.py", label="Explorar", icon=":material/arrow_forward:")
+with col_csv2:
+    with st.container(border=True):
+        st.markdown(":material/person: **Demo Perfil Spotify**")
+        if has_csv_personal:
+            st.caption("Tu ADN musical, top artistas y canciones guardadas (snapshot).")
+            st.page_link("pages/2_Demo_Perfil_Spotify.py", label="Ver perfil", icon=":material/arrow_forward:")
+        else:
+            st.caption(
+                "Genera tus CSVs personales con "
+                "`python scripts/export_personal_data.py`."
+            )
+            st.page_link("pages/2_Demo_Perfil_Spotify.py", label="Ver demo", icon=":material/arrow_forward:")
+
+st.space("small")
+
+# Block 2: Spotify API (requires OAuth)
+st.subheader(":material/cloud: Spotify en vivo (OAuth)")
+
 if is_authenticated:
-    # 4 cards: Global, Mi Perfil, Mis Playlists, Now Playing
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        with st.container(border=True):
-            st.markdown(":material/public: **Global**")
-            st.caption("114k+ tracks: géneros, audio features, tendencias por década.")
-            st.page_link("pages/1_Global.py", label="Explorar", icon=":material/arrow_forward:")
-    with col2:
+    st.caption(f"Conectado como **{profile['display_name']}**.")
+    col_api0, col_api1, col_api2 = st.columns(3)
+    with col_api0:
         with st.container(border=True):
             st.markdown(":material/person: **Mi Perfil**")
-            st.caption("Tu ADN musical, top artistas y canciones guardadas.")
-            st.page_link("pages/2_Mi_Perfil.py", label="Ver perfil", icon=":material/arrow_forward:")
-    with col3:
+            st.caption("Tu ADN musical, top artistas y tracks en tiempo real.")
+            st.page_link("pages/3_Mi_Perfil.py", label="Ver perfil", icon=":material/arrow_forward:")
+    with col_api1:
         with st.container(border=True):
             st.markdown(":material/queue_music: **Mis Playlists**")
-            st.caption("Analiza y compara tus playlists propias.")
-            st.page_link("pages/3_Mis_Playlists.py", label="Analizar", icon=":material/arrow_forward:")
-    with col4:
+            st.caption("Analiza y compara tus playlists en tiempo real.")
+            st.page_link("pages/4_Mis_Playlists.py", label="Analizar", icon=":material/arrow_forward:")
+    with col_api2:
         with st.container(border=True):
             st.markdown(":material/headphones: **Now Playing**")
             st.caption("Reproductor, cola y análisis de escuchas recientes.")
-            st.page_link("pages/4_Now_Playing.py", label="Reproducir", icon=":material/arrow_forward:")
+            st.page_link("pages/5_Now_Playing.py", label="Reproducir", icon=":material/arrow_forward:")
 else:
-    # 2 cards: Global (active) + personal (locked)
-    col_g, col_p = st.columns(2)
-    with col_g:
+    st.caption(
+        ":material/lock: Conecta tu cuenta de Spotify para acceder a "
+        "Mi Perfil, Mis Playlists y Now Playing."
+    )
+    col_api0, col_api1, col_api2 = st.columns(3)
+    with col_api0:
         with st.container(border=True):
-            st.markdown(":material/public: **Global**")
-            st.caption("Explora 114k+ tracks: géneros, audio features, tendencias por década.")
-            st.page_link("pages/1_Global.py", label="Ir a Global", icon=":material/arrow_forward:")
-    with col_p:
+            st.markdown(":material/person: **Mi Perfil**")
+            st.caption("Requiere conectar tu cuenta de Spotify.")
+            st.page_link("pages/3_Mi_Perfil.py", label="Conectar", icon=":material/link:")
+    with col_api1:
         with st.container(border=True):
-            st.markdown(":material/lock: **Funciones personales**")
-            st.caption(
-                "Conecta tu cuenta de Spotify para desbloquear "
-                "Mi Perfil, Playlists y Now Playing."
-            )
-            st.page_link("pages/2_Mi_Perfil.py", label="Conectar Spotify", icon=":material/link:")
+            st.markdown(":material/queue_music: **Mis Playlists**")
+            st.caption("Requiere conectar tu cuenta de Spotify.")
+            st.page_link("pages/4_Mis_Playlists.py", label="Conectar", icon=":material/link:")
+    with col_api2:
+        with st.container(border=True):
+            st.markdown(":material/headphones: **Now Playing**")
+            st.caption("Requiere conectar tu cuenta de Spotify.")
+            st.page_link("pages/5_Now_Playing.py", label="Conectar", icon=":material/link:")

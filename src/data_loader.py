@@ -1,9 +1,12 @@
-"""Data loading pipeline: HuggingFace parquet + Kaggle CSV merge."""
+"""Data loading pipeline: local HF CSV + Kaggle CSVs merge.
+
+Reads pre-downloaded files from data/. Run scripts/download_datasets.py
+to fetch the datasets before first use.
+"""
 
 import logging
 from pathlib import Path
 
-import kagglehub
 import pandas as pd
 import streamlit as st
 
@@ -13,14 +16,17 @@ logger = logging.getLogger(__name__)
 # Constants
 # ---------------------------------------------------------------------------
 
+DATA_DIR: Path = Path(__file__).resolve().parent.parent / "data"
+
+HF_LOCAL_CSV: Path = DATA_DIR / "hf_tracks.csv"
 HF_PARQUET_URL: str = (
     "https://huggingface.co/datasets/maharshipandya/"
     "spotify-tracks-dataset/resolve/refs%2Fconvert%2Fparquet/"
     "default/train/0000.parquet"
 )
 
-KAGGLE_LOCAL_CSV: Path = Path(__file__).resolve().parent.parent / "data" / "kaggle_tracks.csv"
-KAGGLE_DATASET: str = "yamaerenay/spotify-dataset-19212020-600k-tracks"
+KAGGLE_LOCAL_CSV: Path = DATA_DIR / "kaggle_tracks.csv"
+KAGGLE_ARTISTS_CSV: Path = DATA_DIR / "kaggle_artists.csv"
 
 AUDIO_FEATURES: list[str] = [
     "danceability",
@@ -41,15 +47,23 @@ MIN_MERGE_MATCH_RATE: float = 0.10
 # ---------------------------------------------------------------------------
 
 
-@st.cache_data(show_spinner="Descargando dataset de HuggingFace…")
+@st.cache_data(show_spinner="Cargando dataset HuggingFace…")
 def load_hf_dataset() -> pd.DataFrame:
-    """Download and clean the HuggingFace Spotify tracks parquet.
+    """Load and clean the HuggingFace Spotify tracks CSV.
+
+    Reads from the local file first (data/hf_tracks.csv). Falls back
+    to remote parquet URL if the local file doesn't exist yet.
 
     Returns:
         Cleaned DataFrame with standardised column names.
     """
-    df = pd.read_parquet(HF_PARQUET_URL)
-    logger.info("HF raw rows: %d", len(df))
+    if HF_LOCAL_CSV.exists():
+        df = pd.read_csv(HF_LOCAL_CSV)
+        logger.info("HF loaded from local CSV: %d rows", len(df))
+    else:
+        logger.info("Local HF CSV not found — downloading parquet from URL…")
+        df = pd.read_parquet(HF_PARQUET_URL)
+        logger.info("HF downloaded: %d rows", len(df))
 
     # Drop useless index column
     df = df.drop(columns=["Unnamed: 0"], errors="ignore")
@@ -79,47 +93,20 @@ def load_hf_dataset() -> pd.DataFrame:
 # ---------------------------------------------------------------------------
 
 
-def _resolve_kaggle_csv() -> Path | None:
-    """Find the Kaggle tracks CSV: local fallback or kagglehub download.
-
-    Returns:
-        Path to tracks.csv or None if unavailable.
-    """
-    # 1. Local fallback
-    if KAGGLE_LOCAL_CSV.exists():
-        logger.info("Using local Kaggle CSV at %s", KAGGLE_LOCAL_CSV)
-        return KAGGLE_LOCAL_CSV
-
-    # 2. Auto-download via kagglehub
-    try:
-        dataset_dir = kagglehub.dataset_download(KAGGLE_DATASET)
-        csv_path = Path(dataset_dir) / "tracks.csv"
-        if csv_path.exists():
-            logger.info("Downloaded Kaggle dataset via kagglehub: %s", csv_path)
-            return csv_path
-        logger.warning("kagglehub downloaded but tracks.csv not found in %s", dataset_dir)
-    except Exception as e:
-        logger.warning("kagglehub download failed: %s", e)
-
-    return None
-
-
 @st.cache_data(show_spinner="Cargando dataset Kaggle…")
 def load_kaggle_year() -> pd.DataFrame | None:
-    """Load only track_id and year from the Kaggle CSV.
-
-    Tries kagglehub auto-download first, falls back to local CSV.
+    """Load only track_id and year from the local Kaggle CSV.
 
     Returns:
         DataFrame with columns [track_id, year] or None if unavailable.
     """
-    csv_path = _resolve_kaggle_csv()
-    if csv_path is None:
-        logger.warning("Kaggle dataset not available — skipping.")
+    if not KAGGLE_LOCAL_CSV.exists():
+        logger.warning("Kaggle CSV not found at %s — skipping.", KAGGLE_LOCAL_CSV)
         return None
 
+    logger.info("Loading Kaggle CSV from %s", KAGGLE_LOCAL_CSV)
     df = pd.read_csv(
-        csv_path,
+        KAGGLE_LOCAL_CSV,
         usecols=["id", "release_date"],
         dtype={"id": str, "release_date": str},
     )
@@ -132,6 +119,35 @@ def load_kaggle_year() -> pd.DataFrame | None:
     df = df.dropna(subset=["year"])
     df = df.drop_duplicates(subset="track_id", keep="first")
     logger.info("Kaggle year rows: %d", len(df))
+    return df
+
+
+@st.cache_data(show_spinner="Cargando artistas Kaggle…")
+def load_kaggle_artists() -> pd.DataFrame | None:
+    """Load artist info from the local Kaggle artists CSV.
+
+    Returns:
+        DataFrame with columns [artist_id, artist_name, genres,
+        popularity, followers] or None if unavailable.
+    """
+    if not KAGGLE_ARTISTS_CSV.exists():
+        logger.warning("Kaggle artists CSV not found at %s — skipping.", KAGGLE_ARTISTS_CSV)
+        return None
+
+    logger.info("Loading Kaggle artists from %s", KAGGLE_ARTISTS_CSV)
+    df = pd.read_csv(KAGGLE_ARTISTS_CSV)
+
+    # Rename id → artist_id, name → artist_name for consistency
+    rename_map = {}
+    if "id" in df.columns:
+        rename_map["id"] = "artist_id"
+    if "name" in df.columns:
+        rename_map["name"] = "artist_name"
+    if rename_map:
+        df = df.rename(columns=rename_map)
+
+    df = df.drop_duplicates(subset="artist_id", keep="first")
+    logger.info("Kaggle artists: %d rows", len(df))
     return df
 
 

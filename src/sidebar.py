@@ -10,9 +10,9 @@ def render_sidebar_player(sp=None) -> None:
         sp: Authenticated Spotify client. If None, attempts to get one
             silently (without showing login button).
     """
-    from src.spotify_client import (
+    from src.spotify_data import fetch_user_profile
+    from src.spotify_player import (
         fetch_currently_playing,
-        fetch_user_profile,
         player_play,
         player_pause,
         player_next,
@@ -93,7 +93,7 @@ def render_sidebar_player(sp=None) -> None:
 
             # Link to Now Playing page
             st.page_link(
-                "pages/4_Now_Playing.py",
+                "pages/5_Now_Playing.py",
                 label="Abrir Now Playing",
                 icon=":material/open_in_new:",
             )

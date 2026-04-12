@@ -1,75 +1,10 @@
-"""KPI functions for the Playlists page."""
+"""KPI functions for the Playlists page.
+
+Playlist-specific KPIs use only basic track metadata.
+For shared KPIs (decades, explicit, albums) use kpis_personal directly.
+"""
 
 import pandas as pd
-
-from src.data_loader import AUDIO_FEATURES
-from src.kpis_personal import LANGUAGE_GENRES
-
-
-def kpi_playlist_genres(
-    tracks_df: pd.DataFrame,
-    top_n: int = 15,
-) -> pd.DataFrame:
-    """Genre breakdown for a playlist (from HF enrichment).
-
-    Args:
-        tracks_df: Enriched playlist tracks DataFrame (must have 'genre').
-        top_n: Number of top genres to return.
-
-    Returns:
-        DataFrame with columns [genre, count, pct].
-    """
-    if "genre" not in tracks_df.columns or tracks_df["genre"].dropna().empty:
-        return pd.DataFrame(columns=["genre", "count", "pct"])
-
-    # Filter out language/nationality genres
-    genres = tracks_df["genre"].dropna()
-    genres = genres[~genres.str.lower().isin(LANGUAGE_GENRES)]
-
-    if genres.empty:
-        return pd.DataFrame(columns=["genre", "count", "pct"])
-
-    genre_counts = (
-        genres
-        .value_counts()
-        .head(top_n)
-        .reset_index()
-    )
-    genre_counts.columns = ["genre", "count"]
-    total = genre_counts["count"].sum()
-    genre_counts["pct"] = (genre_counts["count"] / total * 100) if total > 0 else 0
-    return genre_counts
-
-
-def kpi_playlist_audio_dna(
-    tracks_df: pd.DataFrame,
-) -> pd.DataFrame:
-    """Average audio features for a playlist (radar chart data).
-
-    Args:
-        tracks_df: Enriched playlist tracks DataFrame.
-
-    Returns:
-        DataFrame with columns [feature, value].
-    """
-    available = [f for f in AUDIO_FEATURES if f in tracks_df.columns]
-    if not available:
-        return pd.DataFrame(columns=["feature", "value"])
-
-    valid = tracks_df.dropna(subset=available)
-    if valid.empty:
-        return pd.DataFrame(columns=["feature", "value"])
-
-    means = valid[available].mean()
-
-    # Normalize features that are not on 0-1 scale
-    if "tempo" in means.index:
-        means["tempo"] = means["tempo"] / 250.0
-    if "loudness" in means.index:
-        # loudness is typically -60 to 0 dB; map to 0-1
-        means["loudness"] = (means["loudness"] + 60.0) / 60.0
-
-    return pd.DataFrame({"feature": means.index, "value": means.values})
 
 
 def kpi_playlist_timeline(
@@ -100,7 +35,7 @@ def kpi_playlist_summary(tracks_df: pd.DataFrame) -> dict:
 
     Returns:
         Dict with total_tracks, total_duration_min, unique_artists,
-        unique_genres.
+        unique_albums.
     """
     total_tracks = len(tracks_df)
     total_duration_min = 0
@@ -109,13 +44,11 @@ def kpi_playlist_summary(tracks_df: pd.DataFrame) -> dict:
             tracks_df["duration_ms"].dropna().sum() / 60_000, 1
         )
     unique_artists = tracks_df["artist"].nunique() if "artist" in tracks_df.columns else 0
-    unique_genres = 0
-    if "genre" in tracks_df.columns:
-        unique_genres = tracks_df["genre"].dropna().nunique()
+    unique_albums = tracks_df["album"].nunique() if "album" in tracks_df.columns else 0
 
     return {
         "total_tracks": total_tracks,
         "total_duration_min": total_duration_min,
         "unique_artists": unique_artists,
-        "unique_genres": unique_genres,
+        "unique_albums": unique_albums,
     }

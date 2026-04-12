@@ -18,7 +18,7 @@ SCOPES: str = (
     "user-library-read user-top-read playlist-read-private "
     "user-read-playback-state user-modify-playback-state "
     "user-read-currently-playing user-read-recently-played "
-    "user-read-private"
+    "user-read-private streaming"
 )
 
 
