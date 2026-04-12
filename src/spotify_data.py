@@ -192,35 +192,6 @@ def fetch_artist_genres(
 
 
 # ---------------------------------------------------------------------------
-# Enrich liked songs with HF audio features
-# ---------------------------------------------------------------------------
-
-
-def enrich_liked_with_hf(
-    liked_df: pd.DataFrame,
-    hf_df: pd.DataFrame,
-) -> pd.DataFrame:
-    """Cross-reference liked songs with HF dataset to get audio features.
-
-    Args:
-        liked_df: DataFrame of liked songs.
-        hf_df: Global HuggingFace DataFrame.
-
-    Returns:
-        Liked DataFrame enriched with audio features where available.
-    """
-    from src.data_loader import AUDIO_FEATURES
-
-    hf_features = hf_df[["track_id"] + AUDIO_FEATURES + ["genre"]].copy()
-    enriched = liked_df.merge(hf_features, on="track_id", how="left")
-
-    matched = enriched[AUDIO_FEATURES[0]].notna().sum()
-    logger.info("HF lookup: %d/%d liked songs matched", matched, len(enriched))
-
-    return enriched
-
-
-# ---------------------------------------------------------------------------
 # User profile
 # ---------------------------------------------------------------------------
 
@@ -358,87 +329,6 @@ def fetch_playlist_tracks(
     if not df.empty and "added_at" in df.columns:
         df["added_at"] = pd.to_datetime(df["added_at"])
     logger.info("Fetched %d tracks from playlist %s", len(df), playlist_id)
-    return df
-
-
-# ---------------------------------------------------------------------------
-# Top tracks
-# ---------------------------------------------------------------------------
-
-
-def fetch_audio_features_safe(
-    sp: spotipy.Spotify,
-    track_ids: list[str],
-    *,
-    max_calls: int = 8,
-    batch_size: int = 100,
-    delay: float = 0.2,
-) -> pd.DataFrame | None:
-    """Fetch audio features for a list of track IDs (safe, non-crashing).
-
-    Calls ``sp.audio_features()`` in batches. Respects a max number of API
-    calls to stay within rate limits. Returns ``None`` on 403 or if the
-    endpoint is unavailable (common with Spotify Development Mode).
-
-    Args:
-        sp: Authenticated Spotify client.
-        track_ids: List of Spotify track IDs.
-        max_calls: Maximum number of API calls to make.
-        batch_size: Number of IDs per API call (max 100).
-        delay: Delay in seconds between calls.
-
-    Returns:
-        DataFrame with [track_id] + audio feature columns, or None on failure.
-    """
-    if not track_ids:
-        return None
-
-    unique_ids = list(dict.fromkeys(tid for tid in track_ids if tid))
-    # Limit total IDs to max_calls * batch_size
-    max_ids = max_calls * batch_size
-    if len(unique_ids) > max_ids:
-        logger.info(
-            "Limiting audio_features to %d tracks (max_calls=%d)",
-            max_ids, max_calls,
-        )
-        unique_ids = unique_ids[:max_ids]
-
-    all_features: list[dict] = []
-
-    for i in range(0, len(unique_ids), batch_size):
-        batch = unique_ids[i : i + batch_size]
-        try:
-            results = sp.audio_features(batch)
-            if results is None:
-                logger.warning("audio_features returned None — endpoint may be unavailable.")
-                return None
-            for feat in results:
-                if feat is not None:
-                    all_features.append(feat)
-        except Exception as e:
-            error_str = str(e).lower()
-            if "403" in error_str or "forbidden" in error_str:
-                logger.warning("audio_features 403 — endpoint not available: %s", e)
-                return None
-            logger.warning("audio_features batch %d failed: %s", i, e)
-            return None
-
-        if i + batch_size < len(unique_ids):
-            time.sleep(delay)
-
-    if not all_features:
-        logger.info("audio_features returned 0 results for %d tracks", len(unique_ids))
-        return None
-
-    df = pd.DataFrame(all_features)
-    # Keep only track id + numeric feature columns
-    keep_cols = ["id", "danceability", "energy", "valence", "tempo",
-                 "acousticness", "speechiness", "instrumentalness",
-                 "liveness", "loudness"]
-    keep_cols = [c for c in keep_cols if c in df.columns]
-    df = df[keep_cols].rename(columns={"id": "track_id"})
-
-    logger.info("audio_features: got %d/%d tracks", len(df), len(unique_ids))
     return df
 
 

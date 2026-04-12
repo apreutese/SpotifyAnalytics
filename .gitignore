@@ -27,7 +27,11 @@ data/raw/
 
 # AI config
 .agent/
+.windsurf/
 .windsurfrules
+
+# One-time scripts (already executed, data committed)
+scripts/
 
 # Private docs (enunciado, plan interno)
 docs-priv/
