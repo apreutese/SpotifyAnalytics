@@ -1,116 +1,104 @@
 # SpotifyAnalytics
 
-Dashboard multipage en Streamlit para analizar datos musicales de Spotify. Combina datos globales (HuggingFace + Kaggle) con datos personales (Spotify Web API).
+Dashboard interactivo con gráficas y métricas sobre datos musicales de Spotify. Trabaja con dos datasets públicos combinados (+114 000 canciones), un perfil de demostración exportado en CSV y la opción de conectar tu propia cuenta de Spotify para analizar tus datos reales.
 
-**Proyecto académico P05** — Digitalización aplicada a los sectores productivos (DAM 1º).
+**Proyecto académico P05** — Digitalización aplicada a los sectores productivos (1º DAM).
 
-## Fuentes de datos
+## Qué hace
 
-| Fuente | Método | Datos |
-|--------|--------|-------|
-| **HuggingFace** | Descarga automática (parquet HTTP) | 114k tracks con audio features y género |
-| **Kaggle** | Descarga automática (kagglehub API) | 600k tracks con año de lanzamiento |
-| **Spotify Web API** | OAuth con Spotipy | Liked songs, top artists, géneros de artista |
+La app tiene 5 páginas principales:
+
+| Página | Descripción |
+|--------|-------------|
+| **Global** | Análisis del dataset global: géneros, popularidad, audio features y distribución por décadas. Incluye filtros y un reproductor con las 100 canciones más populares. |
+| **Demo Perfil** | Versión de demostración del perfil personal. Usa datos precargados (CSV) para mostrar los KPIs sin necesidad de iniciar sesión. |
+| **Mi Perfil** | Tu perfil real de Spotify. Muestra tus canciones guardadas, top artistas, décadas favoritas, ratio explicit/clean y álbumes más repetidos. Requiere iniciar sesión con OAuth. |
+| **Mis Playlists** | Análisis individual de tus playlists (décadas, explicit, álbumes, timeline) y un comparador entre dos playlists con artistas en común. |
+| **Now Playing** | Reproductor en tiempo real con el Spotify Web Playback SDK. Muestra la canción actual, historial reciente y cola de reproducción. |
 
 ## Requisitos
 
 - Python 3.12+
-- Cuenta de Spotify con **Premium** (requerido para Development Mode desde Feb 2026)
-- Credenciales de Spotify Developer Dashboard
-- Credenciales de Kaggle API (opcional, para descarga automática)
+
+Las páginas **Global** y **Demo Perfil** funcionan sin cuenta de Spotify.
+Para usar **Mi Perfil**, **Mis Playlists** y **Now Playing** necesitas:
+
+- Una cuenta de Spotify (Premium recomendado para el reproductor)
+- Credenciales de [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
 
 ## Instalación
 
 ```bash
-# Clonar el repositorio
-git clone <url-del-repo>
+git clone https://github.com/apreutese/SpotifyAnalytics.git
 cd SpotifyAnalytics
 
-# Crear entorno virtual
 python -m venv venv
+venv\Scripts\activate        # Windows
+# source venv/bin/activate   # macOS/Linux
 
-# Activar entorno virtual
-# Windows:
-venv\Scripts\activate
-# macOS/Linux:
-source venv/bin/activate
-
-# Instalar dependencias
 pip install -r requirements.txt
 ```
 
-## Configuración
+## Configuración (opcional)
 
-1. Copia `.env.example` a `.env`:
-   ```bash
-   cp .env.example .env
+> Solo necesario si quieres conectar tu cuenta de Spotify. Sin esto, las páginas Global y Demo Perfil funcionan igualmente.
+
+1. Copia `.env.example` a `.env` y rellena tus credenciales:
+
+   ```
+   SPOTIFY_CLIENT_ID=tu_client_id
+   SPOTIFY_CLIENT_SECRET=tu_client_secret
+   SPOTIFY_REDIRECT_URI=http://127.0.0.1:8501
    ```
 
-2. Rellena las credenciales en `.env`:
-   - **Spotify**: Obtén `Client ID` y `Client Secret` en [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
-   - **Kaggle** (opcional): Genera tu API key en [Kaggle Settings](https://www.kaggle.com/settings) → API → Create New Token
+2. En el [Spotify Developer Dashboard](https://developer.spotify.com/dashboard), añade `http://127.0.0.1:8501` como **Redirect URI** en tu app.
 
-3. En el Spotify Developer Dashboard, añade `http://127.0.0.1:8501` como Redirect URI.
-
-## Uso
+## Cómo ejecutar
 
 ```bash
-streamlit run app.py
+streamlit run Home.py
 ```
 
-La app se abrirá en `http://localhost:8501`.
+Se abre en `http://localhost:8501`. Si has configurado las credenciales, pulsa "Conectar con Spotify" en las páginas que lo requieran.
 
-### Páginas
-
-- **Home**: Resumen del dataset global con métricas clave.
-- **Global**: 4 KPIs con gráficos interactivos Plotly y filtros (género, popularidad, año, explicit).
-- **Mi Perfil**: Conecta tu cuenta de Spotify y visualiza tus estadísticas personales (4 KPIs).
-
-## KPIs
-
-### Globales
-| KPI | Descripción | Gráfico |
-|-----|-------------|---------|
-| G1 | Top géneros por número de tracks | Treemap |
-| G2 | ADN musical por género (audio features) | Radar |
-| G3 | Correlación popularidad vs audio features | Heatmap |
-| G4 | Sentimiento musical por década / Distribución de popularidad | Area / Bar |
-
-### Personales
-| KPI | Descripción | Gráfico |
-|-----|-------------|---------|
-| P1 | Mis géneros (de artistas guardados) | Treemap |
-| P2 | Timeline de canciones guardadas | Area |
-| P3 | Mi ADN musical / Distribución de géneros | Radar / Donut |
-| P4 | Mis top artistas | Bar horizontal |
-
-## Estructura del proyecto
+## Estructura
 
 ```
 SpotifyAnalytics/
-├── app.py                    # Home
+├── Home.py                          # Página de inicio
+├── auth.py                          # Login por terminal (backup)
 ├── pages/
-│   ├── 1_Global.py           # Página Global
-│   └── 2_Mi_Perfil.py        # Página Personal
+│   ├── 1_Global.py
+│   ├── 2_Demo_Perfil_Spotify.py
+│   ├── 3_Mi_Perfil.py
+│   ├── 4_Mis_Playlists.py
+│   └── 5_Now_Playing.py
 ├── src/
-│   ├── data_loader.py        # Pipeline de datos: HF + Kaggle
-│   ├── spotify_client.py     # OAuth + fetch datos Spotify
-│   ├── kpis_global.py        # Cálculos KPI globales
-│   ├── kpis_personal.py      # Cálculos KPI personales
-│   ├── charts_global.py      # Gráficos Plotly globales
-│   └── charts_personal.py    # Gráficos Plotly personales
-├── auth.py                   # Script backup OAuth
-├── data/                     # Datasets locales (gitignored)
-├── .streamlit/config.toml    # Tema Spotify
-├── .env.example              # Template de credenciales
-└── requirements.txt          # Dependencias
+│   ├── data_loader.py               # Carga de datasets (HF + Kaggle)
+│   ├── spotify_auth.py              # OAuth y gestión de tokens
+│   ├── spotify_data.py              # Llamadas a la API de Spotify
+│   ├── kpis_global.py               # KPIs globales
+│   ├── kpis_personal.py             # KPIs personales
+│   ├── kpis_playlists.py            # KPIs de playlists
+│   ├── charts_global.py             # Gráficos globales
+│   ├── charts_personal.py           # Gráficos personales
+│   ├── charts_playlists.py          # Gráficos de playlists
+│   ├── personal_loader.py           # Carga de CSVs personales
+│   ├── sidebar.py                   # Sidebar con reproductor
+│   ├── spotify_player.py            # Reproductor SDK
+│   ├── theme.py                     # Estilos y colores
+│   └── components/
+│       └── playlist_player.py       # Componente de lista de reproducción
+├── data/                            # Datasets locales (CSV)
+├── .streamlit/config.toml           # Tema visual (colores Spotify)
+├── .env.example                     # Plantilla de credenciales
+└── requirements.txt
 ```
 
 ## Tecnologías
 
-- **Streamlit** — Framework de dashboard
-- **Pandas** — Manipulación de datos
+- **Streamlit** — Interfaz web
+- **Pandas** — Manejo de datos
 - **Plotly** — Gráficos interactivos
-- **Spotipy** — Spotify Web API
-- **kagglehub** — Descarga automática de datasets Kaggle
-- **PyArrow** — Lectura de archivos parquet
+- **Spotipy** — Conexión con Spotify
+- **python-dotenv** — Variables de entorno
